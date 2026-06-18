@@ -5,7 +5,7 @@ import { api } from '../api';
 import { useSession } from '../auth/useSession';
 import { useBoardSocket } from './useBoardSocket';
 import { Column } from './Column';
-import { computeNeighbors } from './dnd';
+import { resolveMove } from './dnd';
 import { ShareButton } from './ShareButton';
 import { SortToggle, useSortByVotes, sortedOrder } from './SortToggle';
 import { MaxVotesSetting } from './MaxVotesSetting';
@@ -30,14 +30,15 @@ export function BoardView() {
   const view = sortedOrder(state.order, state.cards, sortOn);
 
   const onDragEnd = (e: DragEndEvent) => {
+    if (!e.over) return;
     const cardId = String(e.active.id);
-    const toColumnId = String(e.over?.data.current?.columnId ?? e.over?.id ?? '');
-    if (!toColumnId) return;
-    const targetIndex = Number(
-      e.over?.data.current?.index ?? (state.order[toColumnId]?.length ?? 0),
-    );
-    const without = (state.order[toColumnId] ?? []).filter((x) => x !== cardId);
-    const { beforeId, afterId } = computeNeighbors(without, targetIndex);
+    const over = e.over.data.current as { columnId?: string; index?: number } | undefined;
+    // `over` is a card slot → { columnId, index }; or a column droppable → { columnId } only.
+    // Fall back to the over node's id when no data is attached (defensive).
+    const toColumnId = over?.columnId ?? String(e.over.id);
+    // No index ⇒ dropped on the column droppable (empty col / below last card) ⇒ tail (null).
+    const overIndex = typeof over?.index === 'number' ? over.index : null;
+    const { beforeId, afterId } = resolveMove(state.order, cardId, toColumnId, overIndex);
     actions.moveCard(cardId, toColumnId, beforeId, afterId);
   };
 

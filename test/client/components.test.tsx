@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { it, expect, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { LoginPage } from '../../src/client/auth/LoginPage';
 import { CreateBoardModal } from '../../src/client/boards/CreateBoardModal';
-import { computeNeighbors } from '../../src/client/board/dnd';
+import { computeNeighbors, resolveMove } from '../../src/client/board/dnd';
 import { sortedOrder } from '../../src/client/board/SortToggle';
 
 it('computes neighbors for a drop position', () => {
@@ -11,6 +11,79 @@ it('computes neighbors for a drop position', () => {
   expect(computeNeighbors(ids, 2)).toEqual({ beforeId: 'b', afterId: 'c' }); // dropping before index 2
   expect(computeNeighbors(ids, 0)).toEqual({ beforeId: null, afterId: 'a' }); // head
   expect(computeNeighbors(ids, 3)).toEqual({ beforeId: 'c', afterId: null }); // tail
+});
+
+describe('resolveMove (drop → moveCard args)', () => {
+  // order is the FULL board order (dragged card still present in its source col).
+  // overIndex is dnd-kit's index into the FULL destination list (or null = empty/tail droppable).
+  const order = { src: ['a', 'b', 'c'], dst: ['x', 'y', 'z'], empty: [] as string[] };
+
+  it('cross-column drop at the head', () => {
+    expect(resolveMove(order, 'a', 'dst', 0)).toEqual({
+      toColumnId: 'dst',
+      beforeId: null,
+      afterId: 'x',
+    });
+  });
+
+  it('cross-column drop in the middle', () => {
+    expect(resolveMove(order, 'a', 'dst', 1)).toEqual({
+      toColumnId: 'dst',
+      beforeId: 'x',
+      afterId: 'y',
+    });
+  });
+
+  it('cross-column drop at the tail (overIndex past last card)', () => {
+    expect(resolveMove(order, 'a', 'dst', 3)).toEqual({
+      toColumnId: 'dst',
+      beforeId: 'z',
+      afterId: null,
+    });
+  });
+
+  it('same-column move DOWN reconciles the off-by-one (a → between b and c)', () => {
+    // dnd-kit reports overIndex=2 (the slot c occupies in the FULL list). With the
+    // dragged 'a' removed the without-list is [b, c]; we want { before:b, after:c }.
+    expect(resolveMove(order, 'a', 'src', 2)).toEqual({
+      toColumnId: 'src',
+      beforeId: 'b',
+      afterId: 'c',
+    });
+  });
+
+  it('same-column move DOWN to the tail (a → after c)', () => {
+    expect(resolveMove(order, 'a', 'src', 3)).toEqual({
+      toColumnId: 'src',
+      beforeId: 'c',
+      afterId: null,
+    });
+  });
+
+  it('same-column move UP does not shift (c → before b)', () => {
+    // dnd-kit reports overIndex=1 (b's slot). without-list [a, b]; target index 1 → { before:a, after:b }.
+    expect(resolveMove(order, 'c', 'src', 1)).toEqual({
+      toColumnId: 'src',
+      beforeId: 'a',
+      afterId: 'b',
+    });
+  });
+
+  it('drop into an empty column (overIndex null → tail of empty)', () => {
+    expect(resolveMove(order, 'a', 'empty', null)).toEqual({
+      toColumnId: 'empty',
+      beforeId: null,
+      afterId: null,
+    });
+  });
+
+  it('drop into an unknown / missing column treats it as empty', () => {
+    expect(resolveMove(order, 'a', 'nope', null)).toEqual({
+      toColumnId: 'nope',
+      beforeId: null,
+      afterId: null,
+    });
+  });
 });
 
 it('sorts a column by votes desc when active, preserves position order when off', () => {

@@ -2,6 +2,7 @@ import { env, SELF } from 'cloudflare:test';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { issueToken, consumeToken } from '../../src/worker/auth/tokens';
 import { randomToken, sha256Hex } from '../../src/worker/auth/crypto';
+import { upsertUserByEmail, createSession } from '../../src/worker/auth/sessions';
 
 beforeEach(async () => {
   await env.DB.exec('DELETE FROM magic_tokens');
@@ -71,5 +72,27 @@ describe('verify + session', () => {
       headers: { origin: 'https://evil.example' },
     });
     expect(res.status).toBe(403);
+  });
+});
+
+describe('GET /api/me', () => {
+  it('returns 401 without a session cookie', async () => {
+    const res = await SELF.fetch('http://localhost:8787/api/me', {
+      headers: { origin: 'http://localhost:8787' },
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns the current user with a valid session cookie', async () => {
+    const userId = await upsertUserByEmail(env, 'me@example.com');
+    const raw = await createSession(env, userId);
+    const res = await SELF.fetch('http://localhost:8787/api/me', {
+      headers: { origin: 'http://localhost:8787', cookie: `session=${raw}` },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json<{ id: string; email: string; display_name: string }>();
+    expect(body.id).toBe(userId);
+    expect(body.email).toBe('me@example.com');
+    expect(body.display_name).toBe('me');
   });
 });

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Env } from './types';
 import { authRoutes } from './auth/routes';
-import { requireOrigin } from './auth/middleware';
+import { requireOrigin, requireSession } from './auth/middleware';
 import { boardRoutes } from './boards/routes';
 import { handleWsUpgrade } from './ws';
 
@@ -15,6 +15,14 @@ app.use('/api/*', async (c, next) => {
 
 app.get('/api/health', (c) => c.json({ ok: true }));
 app.route('/api/auth', authRoutes);
+
+// Session probe for the SPA — returns the current user or 401.
+app.get('/api/me', requireSession, async (c) => {
+  const u = await c.env.DB.prepare('SELECT id,email,display_name FROM users WHERE id=?')
+    .bind(c.get('userId'))
+    .first();
+  return c.json(u);
+});
 // Specific WS path must match BEFORE the generic /api/boards group (which has its own
 // session middleware). The ws handler does its own session + origin + membership checks.
 app.get('/api/boards/:id/ws', (c) => handleWsUpgrade(c));

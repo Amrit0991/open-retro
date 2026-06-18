@@ -191,4 +191,48 @@ export class BoardDb {
     this.sql.exec('DELETE FROM votes WHERE card_id=?', id);
     this.sql.exec('DELETE FROM cards WHERE id=?', id);
   }
+
+  // Atomic per-user vote-budget enforcement in a SINGLE conditional statement —
+  // no read-modify-write window. The budget guard is duplicated on BOTH branches
+  // of the upsert: an `ON CONFLICT DO UPDATE ... WHERE` gates only the UPDATE
+  // branch, so the `INSERT ... SELECT ... WHERE` must also carry the guard or a
+  // first vote on a fresh card/user would bypass the cap. `rowsWritten > 0`
+  // distinguishes a recorded vote from an over-budget rejection.
+  voteAtomic(cardId: string, userId: string): boolean {
+    const c = this.sql.exec(
+      `INSERT INTO votes (card_id, user_id, count)
+         SELECT ?1, ?2, 1
+         WHERE (SELECT COALESCE(SUM(count),0) FROM votes WHERE user_id=?2) < (SELECT max_votes FROM meta WHERE id=1)
+       ON CONFLICT(card_id, user_id) DO UPDATE SET count = count + 1
+         WHERE (SELECT COALESCE(SUM(count),0) FROM votes WHERE user_id=?2) < (SELECT max_votes FROM meta WHERE id=1)`,
+      cardId,
+      userId,
+    );
+    return c.rowsWritten > 0;
+  }
+
+  // Decrement then prune. Always allowed — unvoting never exceeds the budget.
+  unvote(cardId: string, userId: string): void {
+    this.sql.exec(
+      'UPDATE votes SET count=count-1 WHERE card_id=? AND user_id=? AND count>0',
+      cardId,
+      userId,
+    );
+    this.sql.exec('DELETE FROM votes WHERE card_id=? AND user_id=? AND count<=0', cardId, userId);
+  }
+
+  voteTotal(cardId: string): number {
+    return Number(
+      (this.sql.exec('SELECT COALESCE(SUM(count),0) AS t FROM votes WHERE card_id=?', cardId).one() as {
+        t: number;
+      }).t,
+    );
+  }
+
+  userVoteCount(cardId: string, userId: string): number {
+    const r = this.sql
+      .exec('SELECT count FROM votes WHERE card_id=? AND user_id=?', cardId, userId)
+      .toArray()[0] as { count: number } | undefined;
+    return r ? Number(r.count) : 0;
+  }
 }

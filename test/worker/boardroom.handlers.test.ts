@@ -6,6 +6,8 @@ import {
   handleAddCard,
   handleEditCard,
   handleDeleteCard,
+  handleVote,
+  handleUnvote,
 } from '../../src/worker/boardroom/handlers';
 
 // Env.BOARDROOM is a non-parameterized DurableObjectNamespace, so .get() returns
@@ -72,5 +74,46 @@ describe('card handlers (add/edit/delete)', () => {
     });
     expect(res.del.broadcast?.[0]).toMatchObject({ type: 'card_deleted' });
     expect(res.remaining).toBe(0);
+  });
+});
+
+describe('vote handlers (atomic budget)', () => {
+  const ACTOR = { userId: 'u1', displayName: 'Ann' };
+
+  it('enforces the board-wide vote budget across cards', async () => {
+    const stub = freshStub();
+    const out = await runInDurableObject<
+      BoardRoom,
+      { r1: ActionResult; r2: ActionResult; r3: ActionResult; total: number; mine: number }
+    >(stub, (i) => {
+      i.db.seed('three_little_pigs', 2, 'owner'); // budget = 2
+      handleAddCard(i.db, ACTOR, { clientCardId: 'c1', columnId: 'straws', text: 'a' });
+      handleAddCard(i.db, ACTOR, { clientCardId: 'c2', columnId: 'straws', text: 'b' });
+      const [a, b] = i.db.snapshot('u1').cards;
+      const r1 = handleVote(i.db, ACTOR, { cardId: a.id }); // spend 1
+      const r2 = handleVote(i.db, ACTOR, { cardId: a.id }); // spend 2 (2 on same card ok)
+      const r3 = handleVote(i.db, ACTOR, { cardId: b.id }); // over budget -> reject
+      return { r1, r2, r3, total: i.db.voteTotal(a.id), mine: i.db.userVoteCount(a.id, 'u1') };
+    });
+    expect(out.r1.broadcast?.[0]).toMatchObject({ type: 'votes_changed', total: 1 });
+    expect(out.r1.actor?.[0]).toMatchObject({ type: 'your_vote', yourCount: 1 });
+    expect(out.r3.actor?.[0]).toMatchObject({ type: 'error', code: 'budget_exceeded' });
+    expect(out.total).toBe(2);
+    expect(out.mine).toBe(2);
+  });
+
+  it('unvote frees budget and works regardless of cap', async () => {
+    const stub = freshStub();
+    const out = await runInDurableObject<BoardRoom, { before: number; after: number }>(stub, (i) => {
+      i.db.seed('three_little_pigs', 1, 'owner');
+      handleAddCard(i.db, ACTOR, { clientCardId: 'c1', columnId: 'straws', text: 'a' });
+      const a = i.db.snapshot('u1').cards[0];
+      handleVote(i.db, ACTOR, { cardId: a.id });
+      const before = i.db.userVoteCount(a.id, 'u1');
+      handleUnvote(i.db, ACTOR, { cardId: a.id });
+      return { before, after: i.db.userVoteCount(a.id, 'u1') };
+    });
+    expect(out.before).toBe(1);
+    expect(out.after).toBe(0);
   });
 });

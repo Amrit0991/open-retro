@@ -57,3 +57,24 @@ export function handleDeleteCard(
   db.deleteCard(p.cardId);
   return { broadcast: [{ type: 'card_deleted', cardId: p.cardId }] };
 }
+
+// After a vote count changes: broadcast the new card total to everyone, and tell
+// the acting socket its own (possibly capped) count for that card.
+function voteResult(db: BoardDb, actor: Identity, cardId: string): ActionResult {
+  return {
+    broadcast: [{ type: 'votes_changed', cardId, total: db.voteTotal(cardId) }],
+    actor: [{ type: 'your_vote', cardId, yourCount: db.userVoteCount(cardId, actor.userId) }],
+  };
+}
+
+export function handleVote(db: BoardDb, actor: Identity, p: { cardId: string }): ActionResult {
+  if (!db.getCard(p.cardId)) return err('not_found');
+  if (!db.voteAtomic(p.cardId, actor.userId)) return err('budget_exceeded');
+  return voteResult(db, actor, p.cardId);
+}
+
+export function handleUnvote(db: BoardDb, actor: Identity, p: { cardId: string }): ActionResult {
+  if (!db.getCard(p.cardId)) return err('not_found');
+  db.unvote(p.cardId, actor.userId);
+  return voteResult(db, actor, p.cardId);
+}

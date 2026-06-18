@@ -37,3 +37,24 @@ describe('boards CRUD', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('join', () => {
+  it('lets a second logged-in user join via the link and then see the board', async () => {
+    const owner = await login('o2@x.com');
+    const created = await (await SELF.fetch('http://localhost:8787/api/boards', {
+      method: 'POST', headers: { cookie: owner, origin: 'http://localhost:8787', 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'B', template: 'three_little_pigs', maxVotes: 3 }),
+    })).json<{ id: string }>();
+
+    const guest = await login('g@x.com');
+    const before = await SELF.fetch(`http://localhost:8787/api/boards/${created.id}`, { headers: { cookie: guest, origin: 'http://localhost:8787' } });
+    expect(before.status).toBe(404); // not a member yet
+
+    const join = await SELF.fetch(`http://localhost:8787/api/boards/${created.id}/join`, {
+      method: 'POST', headers: { cookie: guest, origin: 'http://localhost:8787' } });
+    expect(join.status).toBe(200);
+
+    const after = await SELF.fetch(`http://localhost:8787/api/boards/${created.id}`, { headers: { cookie: guest, origin: 'http://localhost:8787' } });
+    expect(after.status).toBe(200);
+  });
+});

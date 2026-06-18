@@ -33,3 +33,10 @@ boardRoutes.get('/:id', async (c) => {
   if (!board || !(await repo.isMember(c.env, board.id, c.get('userId')))) return c.json({ error: 'not_found' }, 404);
   return c.json(toJson(board));
 });
+
+boardRoutes.post('/:id/join', async (c) => {
+  const board = await repo.getBoard(c.env, c.req.param('id'));
+  if (!board) return c.json({ error: 'not_found' }, 404);
+  await repo.addMember(c.env, board.id, c.get('userId')); // INSERT OR IGNORE — idempotent
+  return c.json({ joined: true });
+});

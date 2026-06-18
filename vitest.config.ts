@@ -34,6 +34,9 @@ const workerWs = defineProject({
   test: {
     name: 'worker-ws',
     include: ['test/worker/boardroom.ws.test.ts'],
+    // Same schema bootstrap as the `worker` project — the WS test's D1 queries
+    // (issueToken / verify / create board) need the tables applied.
+    setupFiles: ['test/worker/setup-d1.ts'],
   },
 });
 

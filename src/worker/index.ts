@@ -3,6 +3,7 @@ import type { Env } from './types';
 import { authRoutes } from './auth/routes';
 import { requireOrigin } from './auth/middleware';
 import { boardRoutes } from './boards/routes';
+import { handleWsUpgrade } from './ws';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -14,6 +15,9 @@ app.use('/api/*', async (c, next) => {
 
 app.get('/api/health', (c) => c.json({ ok: true }));
 app.route('/api/auth', authRoutes);
+// Specific WS path must match BEFORE the generic /api/boards group (which has its own
+// session middleware). The ws handler does its own session + origin + membership checks.
+app.get('/api/boards/:id/ws', (c) => handleWsUpgrade(c));
 app.route('/api/boards', boardRoutes);
 
 export default app;

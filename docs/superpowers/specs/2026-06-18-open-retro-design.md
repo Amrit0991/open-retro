@@ -1,7 +1,7 @@
 # open-retro — Design Spec
 
 **Date:** 2026-06-18
-**Status:** Awaiting user review
+**Status:** Approved — ready for implementation planning
 
 A deliberately small, real-time collaborative retrospective board (an EasyRetro clone). This spec is the validated design; it has been hardened by a four-lens design review (Cloudflare platform correctness, auth/security, realtime correctness, testing). Findings from that review are folded into the relevant sections below and summarized in **§13 Hardening decisions**.
 
@@ -36,7 +36,7 @@ A deliberately small, real-time collaborative retrospective board (an EasyRetro 
 - **Resend:** magic-link email via its HTTP API (Workers can't open raw SMTP).
 - **Repo:** standalone `open-retro/` (its own git repo).
 
-**Plan note:** SQLite-backed DOs and the WebSocket Hibernation API are usable on the Workers **Free** plan (account-wide DO storage capped at 5 GB; per-object 10 GB requires **Paid**). Board state is tiny relative to these caps. State the target plan explicitly before launch; assume Paid for any real usage.
+**Plan note:** SQLite-backed DOs and the WebSocket Hibernation API are usable on the Workers **Free** plan (account-wide DO storage capped at 5 GB; per-object 10 GB requires **Paid**). Board state is tiny relative to these caps. **Target plan: Workers Paid** (the account already has it) — per-object 10 GB SQLite, no Free-plan DO storage limits to design around.
 
 ---
 
@@ -275,8 +275,8 @@ Detailed task breakdown comes from the writing-plans step. Rough order:
 
 ---
 
-## 15. Open decisions to confirm
+## 15. Decisions (confirmed)
 
-1. **Membership model (§6):** link-shareable among logged-in users *(recommended, matches EasyRetro Share)* vs invite-only.
-2. **Target plan (§2):** Free (fine for dev/demo) vs Paid (recommended for real use).
-3. Anything in **§1 Out of scope** you actually want pulled into v1.
+1. **Membership model (§6):** **link-shareable among logged-in users** — confirmed. Sharing the board URL lets any logged-in user join via the explicit `POST join`; the WS upgrade authorizes existing members only.
+2. **Target plan (§2):** **Workers Paid** — confirmed (account already on Paid).
+3. **Scope:** §1 as written, no additions to v1.

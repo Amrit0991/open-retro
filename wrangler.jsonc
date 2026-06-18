@@ -1,0 +1,28 @@
+{
+  "name": "open-retro",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "BOARDROOM", "class_name": "BoardRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["BoardRoom"] }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "open-retro",
+      // PLACEHOLDER: before any REMOTE deploy, run `npx wrangler d1 create open-retro`
+      // and replace this id with the real one it prints.
+      // Local dev (`wrangler dev`) and @cloudflare/vitest-pool-workers use a local
+      // Miniflare D1 and do NOT need a real database_id.
+      "database_id": "local-dev-placeholder"
+    }
+  ],
+  "vars": { "APP_ORIGIN": "http://localhost:8787" }
+}

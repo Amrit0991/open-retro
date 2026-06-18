@@ -1,0 +1,106 @@
+import { TEMPLATES } from '../../shared/templates';
+import type { BoardSnapshot, Card, ColumnDef, TemplateId } from '../../shared/protocol';
+
+// Wraps a Durable Object's embedded SQLite (`ctx.storage.sql`). All methods are
+// synchronous — the SQLite storage backend exposes a synchronous `SqlStorage`.
+export class BoardDb {
+  constructor(private sql: SqlStorage) {
+    this.init();
+  }
+
+  // Idempotent: `CREATE TABLE IF NOT EXISTS` runs safely on every DO construction.
+  // One statement per `exec` call — the runtime rejects multi-statement strings.
+  private init(): void {
+    this.sql.exec(
+      'CREATE TABLE IF NOT EXISTS meta (id INTEGER PRIMARY KEY CHECK (id=1), template TEXT, max_votes INTEGER, owner_id TEXT, seeded INTEGER DEFAULT 0)',
+    );
+    this.sql.exec(
+      'CREATE TABLE IF NOT EXISTS columns (id TEXT PRIMARY KEY, title TEXT, subtitle TEXT, position INTEGER)',
+    );
+    this.sql.exec(
+      'CREATE TABLE IF NOT EXISTS cards (id TEXT PRIMARY KEY, column_id TEXT, text TEXT, author_id TEXT, author_name TEXT, position REAL, created_at INTEGER)',
+    );
+    this.sql.exec(
+      'CREATE TABLE IF NOT EXISTS votes (card_id TEXT, user_id TEXT, count INTEGER, PRIMARY KEY (card_id, user_id))',
+    );
+  }
+
+  // Idempotent: a `seeded` flag guards against double-inserting columns.
+  seed(template: TemplateId, maxVotes: number, ownerId: string): void {
+    const row = this.sql.exec('SELECT seeded FROM meta WHERE id=1').toArray()[0] as
+      | { seeded: number }
+      | undefined;
+    if (row?.seeded === 1) return;
+    this.sql.exec(
+      'INSERT OR REPLACE INTO meta (id,template,max_votes,owner_id,seeded) VALUES (1,?,?,?,1)',
+      template,
+      maxVotes,
+      ownerId,
+    );
+    TEMPLATES[template].columns.forEach((col: ColumnDef, i: number) => {
+      this.sql.exec(
+        'INSERT OR IGNORE INTO columns (id,title,subtitle,position) VALUES (?,?,?,?)',
+        col.id,
+        col.title,
+        col.subtitle,
+        i,
+      );
+    });
+  }
+
+  getMeta(): { template: TemplateId; maxVotes: number; ownerId: string } {
+    const m = this.sql.exec('SELECT template,max_votes,owner_id FROM meta WHERE id=1').one() as {
+      template: string;
+      max_votes: number;
+      owner_id: string;
+    };
+    return { template: m.template as TemplateId, maxVotes: Number(m.max_votes), ownerId: m.owner_id };
+  }
+
+  setMaxVotes(n: number): void {
+    this.sql.exec('UPDATE meta SET max_votes=? WHERE id=1', n);
+  }
+
+  snapshot(userId: string): BoardSnapshot {
+    const meta = this.getMeta();
+    const columns = this.sql
+      .exec('SELECT id,title,subtitle FROM columns ORDER BY position')
+      .toArray() as unknown as ColumnDef[];
+    const cards = (
+      this.sql
+        .exec(
+          `SELECT c.id,c.column_id,c.text,c.author_id,c.author_name,c.position,c.created_at,
+                  COALESCE((SELECT SUM(count) FROM votes v WHERE v.card_id=c.id),0) AS votes
+           FROM cards c ORDER BY c.position, c.created_at, c.id`,
+        )
+        .toArray() as Array<{
+        id: string;
+        column_id: string;
+        text: string;
+        author_id: string;
+        author_name: string;
+        position: number;
+        created_at: number;
+        votes: number;
+      }>
+    ).map(
+      (r): Card => ({
+        id: r.id,
+        columnId: r.column_id,
+        text: r.text,
+        authorId: r.author_id,
+        authorName: r.author_name,
+        position: Number(r.position),
+        createdAt: Number(r.created_at),
+        votes: Number(r.votes),
+      }),
+    );
+    const yourVotes: Record<string, number> = {};
+    for (const r of this.sql
+      .exec('SELECT card_id,count FROM votes WHERE user_id=?', userId)
+      .toArray() as Array<{ card_id: string; count: number }>) {
+      yourVotes[r.card_id] = Number(r.count);
+    }
+    return { meta, columns, cards, yourVotes };
+  }
+}

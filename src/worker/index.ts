@@ -17,3 +17,7 @@ app.route('/api/auth', authRoutes);
 app.route('/api/boards', boardRoutes);
 
 export default app;
+
+// Durable Object — must be exported from the worker entry so the runtime/pool
+// can instantiate the `BoardRoom` class bound as BOARDROOM in wrangler.jsonc.
+export { BoardRoom } from './boardroom/boardroom';

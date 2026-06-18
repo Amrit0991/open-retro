@@ -103,4 +103,92 @@ export class BoardDb {
     }
     return { meta, columns, cards, yourVotes };
   }
+
+  // Inserts a card at the end of its column. position = MAX(position)+1024 keeps
+  // gaps wide enough for fractional reordering later. created_at is the tiebreaker.
+  addCard(card: {
+    id: string;
+    columnId: string;
+    text: string;
+    authorId: string;
+    authorName: string;
+  }): Card {
+    const now = Date.now();
+    const max = Number(
+      (
+        this.sql
+          .exec('SELECT COALESCE(MAX(position),0) AS m FROM cards WHERE column_id=?', card.columnId)
+          .one() as { m: number }
+      ).m,
+    );
+    const position = max + 1024;
+    this.sql.exec(
+      'INSERT INTO cards (id,column_id,text,author_id,author_name,position,created_at) VALUES (?,?,?,?,?,?,?)',
+      card.id,
+      card.columnId,
+      card.text,
+      card.authorId,
+      card.authorName,
+      position,
+      now,
+    );
+    return {
+      id: card.id,
+      columnId: card.columnId,
+      text: card.text,
+      authorId: card.authorId,
+      authorName: card.authorName,
+      position,
+      createdAt: now,
+      votes: 0,
+    };
+  }
+
+  getCard(id: string): Card | null {
+    const r = this.sql
+      .exec(
+        `SELECT id,column_id,text,author_id,author_name,position,created_at,
+                COALESCE((SELECT SUM(count) FROM votes WHERE card_id=?1),0) AS votes
+         FROM cards WHERE id=?1`,
+        id,
+      )
+      .toArray()[0] as
+      | {
+          id: string;
+          column_id: string;
+          text: string;
+          author_id: string;
+          author_name: string;
+          position: number;
+          created_at: number;
+          votes: number;
+        }
+      | undefined;
+    return r
+      ? {
+          id: r.id,
+          columnId: r.column_id,
+          text: r.text,
+          authorId: r.author_id,
+          authorName: r.author_name,
+          position: Number(r.position),
+          createdAt: Number(r.created_at),
+          votes: Number(r.votes),
+        }
+      : null;
+  }
+
+  columnExists(columnId: string): boolean {
+    return !!this.sql.exec('SELECT 1 FROM columns WHERE id=?', columnId).toArray()[0];
+  }
+
+  editCard(id: string, text: string): boolean {
+    return this.sql.exec('UPDATE cards SET text=? WHERE id=?', text, id).rowsWritten > 0;
+  }
+
+  // Delete votes first, then the card. We do not rely on FK cascade.
+  deleteCard(id: string): void {
+    this.sql.exec('DELETE FROM votes WHERE card_id=?', id);
+    this.sql.exec('DELETE FROM cards WHERE id=?', id);
+  }
 }

@@ -6,10 +6,14 @@ import { useSession } from '../auth/useSession';
 import { useBoardSocket } from './useBoardSocket';
 import { Column } from './Column';
 import { computeNeighbors } from './dnd';
+import { ShareButton } from './ShareButton';
+import { SortToggle, useSortByVotes, sortedOrder } from './SortToggle';
+import { MaxVotesSetting } from './MaxVotesSetting';
 
 export function BoardView() {
   const { id } = useParams<{ id: string }>();
   const { user, loading } = useSession();
+  const [sortOn, toggleSort] = useSortByVotes(id ?? '');
 
   useEffect(() => {
     if (id) api.joinBoard(id).catch(() => {});
@@ -22,6 +26,8 @@ export function BoardView() {
   if (!state.ready) return <p>Connecting…</p>;
 
   const myUserId = user.id;
+  const isOwner = state.ownerId === myUserId;
+  const view = sortedOrder(state.order, state.cards, sortOn);
 
   const onDragEnd = (e: DragEndEvent) => {
     const cardId = String(e.active.id);
@@ -35,16 +41,31 @@ export function BoardView() {
     actions.moveCard(cardId, toColumnId, beforeId, afterId);
   };
 
-  // Header components (sort toggle, share, max-votes) land in Task 20.
+  const columns = (
+    <div className="columns">
+      {state.columns.map((col) => (
+        <Column
+          key={col.id}
+          col={col}
+          state={state}
+          myUserId={myUserId}
+          actions={actions}
+          ids={view[col.id]}
+        />
+      ))}
+    </div>
+  );
+
   return (
     <main className="board">
-      <DndContext onDragEnd={onDragEnd}>
-        <div className="columns">
-          {state.columns.map((col) => (
-            <Column key={col.id} col={col} state={state} myUserId={myUserId} actions={actions} />
-          ))}
-        </div>
-      </DndContext>
+      <header className="board-header">
+        <ShareButton boardId={id ?? ''} />
+        <SortToggle on={sortOn} toggle={toggleSort} />
+        {isOwner && <MaxVotesSetting value={state.maxVotes} onChange={actions.setMaxVotes} />}
+      </header>
+      {/* Drag is disabled while sorted by votes: neighbor ids from vote-order
+          would corrupt stored positions. */}
+      {sortOn ? columns : <DndContext onDragEnd={onDragEnd}>{columns}</DndContext>}
     </main>
   );
 }

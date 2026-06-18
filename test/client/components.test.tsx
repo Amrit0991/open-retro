@@ -4,12 +4,20 @@ import { it, expect, vi } from 'vitest';
 import { LoginPage } from '../../src/client/auth/LoginPage';
 import { CreateBoardModal } from '../../src/client/boards/CreateBoardModal';
 import { computeNeighbors } from '../../src/client/board/dnd';
+import { sortedOrder } from '../../src/client/board/SortToggle';
 
 it('computes neighbors for a drop position', () => {
   const ids = ['a', 'b', 'c'];
   expect(computeNeighbors(ids, 2)).toEqual({ beforeId: 'b', afterId: 'c' }); // dropping before index 2
   expect(computeNeighbors(ids, 0)).toEqual({ beforeId: null, afterId: 'a' }); // head
   expect(computeNeighbors(ids, 3)).toEqual({ beforeId: 'c', afterId: null }); // tail
+});
+
+it('sorts a column by votes desc when active, preserves position order when off', () => {
+  const cards: any = { a: { votes: 1, position: 1 }, b: { votes: 3, position: 2 }, c: { votes: 2, position: 3 } };
+  const order = { col: ['a', 'b', 'c'] };
+  expect(sortedOrder(order, cards, true).col).toEqual(['b', 'c', 'a']);
+  expect(sortedOrder(order, cards, false).col).toEqual(['a', 'b', 'c']);
 });
 
 it('submits email and shows the check-inbox confirmation', async () => {

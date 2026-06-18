@@ -11,13 +11,15 @@ export function Column({
   state,
   myUserId,
   actions,
+  ids: idsProp,
 }: {
   col: ColumnDef;
   state: BoardState;
   myUserId: string;
   actions: BoardActions;
+  ids?: string[];
 }) {
-  const ids = state.order[col.id] ?? [];
+  const ids = idsProp ?? state.order[col.id] ?? [];
   return (
     <section className="column">
       <h2>{col.title}</h2>

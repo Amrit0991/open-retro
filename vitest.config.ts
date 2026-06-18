@@ -15,6 +15,8 @@ const worker = defineProject({
     name: 'worker',
     include: ['test/worker/**/*.test.ts'],
     exclude: ['test/worker/boardroom.ws.test.ts'],
+    // Applies src/worker/db/schema.sql to the (empty) test D1 before each suite.
+    setupFiles: ['test/worker/setup-d1.ts'],
   },
 });
 

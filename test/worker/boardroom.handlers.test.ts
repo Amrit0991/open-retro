@@ -8,6 +8,8 @@ import {
   handleDeleteCard,
   handleVote,
   handleUnvote,
+  handleMoveCard,
+  handleSetMaxVotes,
 } from '../../src/worker/boardroom/handlers';
 
 // Env.BOARDROOM is a non-parameterized DurableObjectNamespace, so .get() returns
@@ -115,5 +117,38 @@ describe('vote handlers (atomic budget)', () => {
     });
     expect(out.before).toBe(1);
     expect(out.after).toBe(0);
+  });
+});
+
+describe('move + set_max_votes handlers', () => {
+  const ACTOR = { userId: 'u1', displayName: 'Ann' };
+
+  it('moves a card to another column at the right position', async () => {
+    const stub = freshStub();
+    const out = await runInDurableObject<BoardRoom, { moved: ActionResult; snap: BoardSnapshot }>(stub, (i: any) => {
+      i.db.seed('sailboat', 6, 'owner');
+      handleAddCard(i.db, ACTOR, { clientCardId: 'c1', columnId: 'wind', text: 'a' });
+      const a = i.db.snapshot('u1').cards[0];
+      const moved = handleMoveCard(i.db, ACTOR, { cardId: a.id, toColumnId: 'anchors', beforeId: null, afterId: null });
+      return { moved, snap: i.db.snapshot('u1') };
+    });
+    expect(out.moved.broadcast?.[0].type).toMatch(/card_moved|cards_reordered/);
+    expect(out.snap.cards[0].columnId).toBe('anchors');
+  });
+
+  it('set_max_votes by non-owner is rejected; owner updates + broadcasts', async () => {
+    const stub = freshStub();
+    const out = await runInDurableObject<
+      BoardRoom,
+      { bad: ActionResult; ok: ActionResult; meta: { template: string; maxVotes: number; ownerId: string } }
+    >(stub, (i: any) => {
+      i.db.seed('sailboat', 6, 'owner');
+      const bad = handleSetMaxVotes(i.db, { userId: 'u1', displayName: 'A' }, { n: 3 });
+      const ok = handleSetMaxVotes(i.db, { userId: 'owner', displayName: 'O' }, { n: 3 });
+      return { bad, ok, meta: i.db.getMeta() };
+    });
+    expect(out.bad.actor?.[0]).toMatchObject({ type: 'error', code: 'forbidden' });
+    expect(out.ok.broadcast?.[0]).toMatchObject({ type: 'max_votes_changed', maxVotes: 3 });
+    expect(out.meta.maxVotes).toBe(3);
   });
 });

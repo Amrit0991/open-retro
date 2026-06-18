@@ -235,4 +235,80 @@ export class BoardDb {
       .toArray()[0] as { count: number } | undefined;
     return r ? Number(r.count) : 0;
   }
+
+  // Ordered ids+positions in a column. Tie-break `position, created_at, id` mirrors
+  // the snapshot ordering so renormalize preserves the visible card order.
+  private columnCards(columnId: string): { id: string; position: number }[] {
+    return (
+      this.sql
+        .exec(
+          'SELECT id, position FROM cards WHERE column_id=? ORDER BY position, created_at, id',
+          columnId,
+        )
+        .toArray() as Array<{ id: string; position: number }>
+    ).map((c) => ({ id: c.id, position: Number(c.position) }));
+  }
+
+  // Safety valve for fractional-position underflow: rewrite every card in the
+  // column to evenly spaced positions (1024, 2048, …). One UPDATE per card —
+  // `sql.exec` is single-statement.
+  private renormalize(columnId: string): { id: string; position: number }[] {
+    const positions = this.columnCards(columnId).map((c, i) => ({
+      id: c.id,
+      position: (i + 1) * 1024,
+    }));
+    for (const p of positions) {
+      this.sql.exec('UPDATE cards SET position=? WHERE id=?', p.position, p.id);
+    }
+    return positions;
+  }
+
+  // Moves a card into `toColumnId` between its CURRENT neighbours. Reads the live
+  // stored positions of beforeId/afterId (scoped to the target column) — never
+  // trusts client-sent positions. beforeId = neighbour above (smaller position),
+  // afterId = neighbour below (larger). When the midpoint gap underflows we move
+  // the card then renormalize the whole column and report a 'reordered' result.
+  moveCard(
+    cardId: string,
+    toColumnId: string,
+    beforeId: string | null,
+    afterId: string | null,
+  ):
+    | { type: 'moved'; columnId: string; position: number }
+    | { type: 'reordered'; columnId: string; positions: { id: string; position: number }[] } {
+    const pos = (id: string | null): number | undefined => {
+      if (!id) return undefined;
+      const r = this.sql
+        .exec('SELECT position FROM cards WHERE id=? AND column_id=?', id, toColumnId)
+        .toArray()[0] as { position: number } | undefined;
+      return r ? Number(r.position) : undefined;
+    };
+    const before = pos(beforeId); // neighbour above (smaller position)
+    const after = pos(afterId); // neighbour below (larger position)
+    let position: number;
+    if (before !== undefined && after !== undefined) {
+      if (after - before < 1e-9) {
+        // Underflow: set column then renormalize the whole target column.
+        this.sql.exec('UPDATE cards SET column_id=? WHERE id=?', toColumnId, cardId);
+        const positions = this.renormalize(toColumnId);
+        return { type: 'reordered', columnId: toColumnId, positions };
+      }
+      position = (before + after) / 2;
+    } else if (after !== undefined) {
+      position = after - 1024;
+    } else if (before !== undefined) {
+      position = before + 1024;
+    } else {
+      const m = Number(
+        (
+          this.sql
+            .exec('SELECT COALESCE(MAX(position),0) AS m FROM cards WHERE column_id=?', toColumnId)
+            .one() as { m: number }
+        ).m,
+      );
+      position = m + 1024;
+    }
+    this.sql.exec('UPDATE cards SET column_id=?, position=? WHERE id=?', toColumnId, position, cardId);
+    return { type: 'moved', columnId: toColumnId, position };
+  }
 }

@@ -78,3 +78,35 @@ export function handleUnvote(db: BoardDb, actor: Identity, p: { cardId: string }
   db.unvote(p.cardId, actor.userId);
   return voteResult(db, actor, p.cardId);
 }
+
+// Drag a card to a new column/position. Neighbour ids come from the client but
+// their positions are re-read server-side (see BoardDb.moveCard). A normal move
+// broadcasts `card_moved`; a renormalized column broadcasts `cards_reordered`.
+export function handleMoveCard(
+  db: BoardDb,
+  _actor: Identity,
+  p: { cardId: string; toColumnId: string; beforeId: string | null; afterId: string | null },
+): ActionResult {
+  if (!db.getCard(p.cardId)) return err('not_found');
+  if (!db.columnExists(p.toColumnId)) return err('bad_column');
+  const r = db.moveCard(p.cardId, p.toColumnId, p.beforeId, p.afterId);
+  if (r.type === 'moved') {
+    return { broadcast: [{ type: 'card_moved', cardId: p.cardId, columnId: r.columnId, position: r.position }] };
+  }
+  return { broadcast: [{ type: 'cards_reordered', columnId: r.columnId, positions: r.positions }] };
+}
+
+// Owner-only board setting. Identity is taken from `actor`/`getMeta`, never the
+// payload. `mirrorMaxVotes` is read by the DO (Task 13) to best-effort write the
+// new value through to D1 via ctx.waitUntil.
+export function handleSetMaxVotes(
+  db: BoardDb,
+  actor: Identity,
+  p: { n: number },
+): ActionResult & { mirrorMaxVotes?: number } {
+  if (actor.userId !== db.getMeta().ownerId) return err('forbidden');
+  const n = Math.trunc(p.n);
+  if (!Number.isInteger(n) || n < 1 || n > LIMITS.maxVotesMax) return err('bad_max_votes');
+  db.setMaxVotes(n);
+  return { broadcast: [{ type: 'max_votes_changed', maxVotes: n }], mirrorMaxVotes: n };
+}

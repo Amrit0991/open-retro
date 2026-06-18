@@ -1,6 +1,7 @@
 import { env, SELF } from 'cloudflare:test';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { issueToken, consumeToken } from '../../src/worker/auth/tokens';
+import { randomToken, sha256Hex } from '../../src/worker/auth/crypto';
 
 beforeEach(async () => {
   await env.DB.exec('DELETE FROM magic_tokens');
@@ -18,6 +19,17 @@ describe('magic tokens', () => {
   it('rejects unknown/expired token', async () => {
     expect(await consumeToken(env, 'nope')).toBeNull();
   });
+
+  it('rejects an expired (but otherwise valid) token', async () => {
+    const raw = randomToken();
+    const past = Date.now() - 1000;
+    await env.DB.prepare(
+      'INSERT INTO magic_tokens (token_hash, email, expires_at, consumed_at, created_at) VALUES (?,?,?,NULL,?)',
+    )
+      .bind(await sha256Hex(raw), 'old@expired.com', past, past - 1000)
+      .run();
+    expect(await consumeToken(env, raw)).toBeNull();
+  });
 });
 
 describe('POST /api/auth/request', () => {
@@ -30,5 +42,34 @@ describe('POST /api/auth/request', () => {
     expect(res.status).toBe(200);
     const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM magic_tokens').first<{ n: number }>();
     expect(n!.n).toBe(1);
+  });
+});
+
+describe('verify + session', () => {
+  it('verify consumes token, sets cookie, redirects to /', async () => {
+    const raw = await issueToken(env, 'e@f.com');
+    const res = await SELF.fetch(
+      `http://localhost:8787/api/auth/verify?token=${encodeURIComponent(raw)}`,
+      { redirect: 'manual' },
+    );
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('/');
+    expect(res.headers.get('set-cookie')).toMatch(/session=/);
+    expect(res.headers.get('set-cookie')).toMatch(/HttpOnly/i);
+  });
+
+  it('rejects a request to a protected route without a session', async () => {
+    const res = await SELF.fetch('http://localhost:8787/api/boards', {
+      headers: { origin: 'http://localhost:8787' },
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects mutating request from a foreign origin', async () => {
+    const res = await SELF.fetch('http://localhost:8787/api/auth/logout', {
+      method: 'POST',
+      headers: { origin: 'https://evil.example' },
+    });
+    expect(res.status).toBe(403);
   });
 });

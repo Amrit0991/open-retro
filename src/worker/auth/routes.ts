@@ -1,7 +1,15 @@
 import { Hono } from 'hono';
+import { getCookie } from 'hono/cookie';
 import type { Env } from '../types';
-import { issueToken } from './tokens';
+import { issueToken, consumeToken } from './tokens';
 import { sendMagicLink } from './mailer';
+import {
+  upsertUserByEmail,
+  createSession,
+  deleteSession,
+  setSessionCookie,
+  clearSessionCookie,
+} from './sessions';
 
 export const authRoutes = new Hono<{ Bindings: Env }>();
 
@@ -20,4 +28,21 @@ authRoutes.post('/request', async (c) => {
     if (c.env.AUTH_TEST_MODE === '1') return c.json({ ok: true, devUrl: url });
   }
   return c.json({ ok: true }); // uniform response — no enumeration
+});
+
+authRoutes.get('/verify', async (c) => {
+  const token = c.req.query('token'); // do NOT log request.url
+  if (!token) return c.redirect('/login?error=invalid', 302);
+  const email = await consumeToken(c.env, token);
+  if (!email) return c.redirect('/login?error=invalid', 302);
+  const userId = await upsertUserByEmail(c.env, email);
+  const raw = await createSession(c.env, userId);
+  setSessionCookie(c, raw);
+  return c.redirect('/', 302); // hardcoded target — no open redirect
+});
+
+authRoutes.post('/logout', async (c) => {
+  await deleteSession(c.env, getCookie(c, 'session'));
+  clearSessionCookie(c);
+  return c.json({ ok: true });
 });

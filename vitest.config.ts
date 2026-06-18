@@ -10,7 +10,14 @@ import { defineConfig, defineProject } from 'vitest/config';
 
 // Worker/DO unit + integration tests (per-test isolated storage).
 const worker = defineProject({
-  plugins: [cloudflareTest({ wrangler: { configPath: './wrangler.jsonc' } })],
+  plugins: [
+    cloudflareTest({
+      wrangler: { configPath: './wrangler.jsonc' },
+      // Test-only var: short-circuits the Resend mailer so auth tests never make
+      // real outbound fetches. Lives here (not wrangler.jsonc) to keep dev/prod clean.
+      miniflare: { bindings: { AUTH_TEST_MODE: '1' } },
+    }),
+  ],
   test: {
     name: 'worker',
     include: ['test/worker/**/*.test.ts'],

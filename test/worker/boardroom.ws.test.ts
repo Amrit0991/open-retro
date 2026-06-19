@@ -39,6 +39,8 @@ describe('WS transport', () => {
     );
     expect(init.type).toBe('init');
     expect(init.snapshot.columns).toHaveLength(3);
+    expect(init.snapshot.meta.templateName).toBe('Three Little Pigs');
+    expect(typeof init.snapshot.columns[0].tone).toBe('string');
   });
 
   it('rejects a non-member upgrade with 403', async () => {

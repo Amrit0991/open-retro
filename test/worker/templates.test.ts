@@ -9,4 +9,13 @@ describe('templates', () => {
     expect(TEMPLATES.sailboat.columns).toHaveLength(4);
     expect(TEMPLATES.sailboat.columns[0].id).toBe('wind');
   });
+  it('columns carry a tone and icon', () => {
+    const c = TEMPLATES.sailboat.columns[1];
+    expect(c.id).toBe('anchors');
+    expect(c.tone).toBe('slate');
+    expect(typeof c.icon).toBe('string');
+  });
+  it('templates carry a representative glyph', () => {
+    expect(TEMPLATES.sailboat.glyph).toEqual({ tone: 'blue', icon: 'sail' });
+  });
 });

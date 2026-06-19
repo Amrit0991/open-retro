@@ -134,7 +134,9 @@ const PATHS: Record<IconName, ReactNode> = {
   ),
 };
 
-export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
+export function Icon({ name, size = 18 }: { name: string; size?: number }) {
+  // Tolerate unknown icon names (e.g. custom-template glyphs) by falling back to `layers`.
+  const node = (PATHS as Record<string, ReactNode>)[name] ?? PATHS.layers;
   return (
     <svg
       width={size}
@@ -147,7 +149,7 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      {PATHS[name]}
+      {node}
     </svg>
   );
 }

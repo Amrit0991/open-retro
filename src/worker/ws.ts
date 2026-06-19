@@ -1,6 +1,8 @@
 import type { Context } from 'hono';
 import { getCookie } from 'hono/cookie';
 import type { Env } from './types';
+import type { TemplateSnapshot } from '../shared/protocol';
+import { TEMPLATES } from '../shared/templates';
 import { userIdForSession } from './auth/sessions';
 import { getBoard, isMember } from './boards/repo';
 
@@ -26,6 +28,14 @@ export async function handleWsUpgrade(c: Context<{ Bindings: Env }>): Promise<Re
     .bind(userId)
     .first<{ display_name: string }>();
 
+  // Resolve the board's column/glyph snapshot. Boards created before the
+  // template-builder feature have no stored snapshot → fall back to the built-in
+  // by `board.template`. (Task 5 adds the typed `template_snapshot` column.)
+  const storedSnapshot = (board as { template_snapshot?: string | null }).template_snapshot;
+  const snapshot: TemplateSnapshot = storedSnapshot
+    ? JSON.parse(storedSnapshot)
+    : TEMPLATES[board.template as keyof typeof TEMPLATES];
+
   const stub = c.env.BOARDROOM.get(c.env.BOARDROOM.idFromName(boardId));
   const fwd = new Request(c.req.url, {
     headers: {
@@ -33,7 +43,7 @@ export async function handleWsUpgrade(c: Context<{ Bindings: Env }>): Promise<Re
       'x-user-id': userId,
       'x-display-name': user?.display_name ?? 'Someone',
       'x-board-id': boardId,
-      'x-template': board.template,
+      'x-template-json': JSON.stringify(snapshot),
       'x-max-votes': String(board.max_votes),
       'x-owner-id': board.owner_id,
     },

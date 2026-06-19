@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
+import { TEMPLATES } from '../../shared/templates';
+import type { Tone } from '../../shared/protocol';
 import { Glyph } from '../ui/Glyph';
-import { templateGlyph, templateName } from '../ui/glyphs';
+import { templateName } from '../ui/glyphs';
 
 export function BoardCard({
   board,
@@ -9,7 +11,12 @@ export function BoardCard({
   board: { id: string; name: string; template: string };
   index?: number;
 }) {
-  const g = templateGlyph(board.template);
+  // Temporary: glyph from the built-in template by id (Task 5 switches to server-resolved board.glyph).
+  const g: { tone: Tone; icon: string } =
+    (TEMPLATES as Record<string, { glyph: { tone: Tone; icon: string } }>)[board.template]?.glyph ?? {
+      tone: 'slate',
+      icon: 'layers',
+    };
   return (
     <Link
       to={`/b/${board.id}`}

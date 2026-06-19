@@ -3,7 +3,6 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Card } from './Card';
 import { AddCardInput } from './AddCardInput';
 import { Glyph } from '../ui/Glyph';
-import { columnGlyph } from '../ui/glyphs';
 import type { BoardState } from './reducer';
 import type { useBoardSocket } from './useBoardSocket';
 import type { ColumnDef } from '../../shared/protocol';
@@ -24,7 +23,6 @@ export function Column({
   ids?: string[];
 }) {
   const ids = idsProp ?? state.order[col.id] ?? [];
-  const g = columnGlyph(col.id);
 
   // Column-level droppable so dropping into an empty column (or below the last card,
   // where no card slot is `over`) still resolves a destination column in onDragEnd.
@@ -33,7 +31,7 @@ export function Column({
   return (
     <section ref={setNodeRef} className="column">
       <div className="col-head">
-        <Glyph tone={g.tone} icon={g.icon} size={28} />
+        <Glyph tone={col.tone} icon={col.icon} size={28} />
         <h2>{col.title}</h2>
         <span className="count">{ids.length}</span>
       </div>

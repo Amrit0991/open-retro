@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { TEMPLATES } from '../../shared/templates';
 import type { TemplateId } from '../../shared/protocol';
 import { Glyph } from '../ui/Glyph';
-import { templateGlyph } from '../ui/glyphs';
 
 export function CreateBoardModal({
   onCreate,
@@ -15,7 +14,7 @@ export function CreateBoardModal({
   const [template, setTemplate] = useState<TemplateId>('three_little_pigs');
   const [maxVotes, setMaxVotes] = useState(6);
   const [error, setError] = useState(false);
-  const g = templateGlyph(template);
+  const g = TEMPLATES[template].glyph;
 
   return (
     <div className="overlay" onClick={onClose}>

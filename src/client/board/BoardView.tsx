@@ -20,7 +20,6 @@ import { SortToggle, useSortByVotes, sortedOrder } from './SortToggle';
 import { MaxVotesSetting } from './MaxVotesSetting';
 import { Glyph } from '../ui/Glyph';
 import { Icon } from '../ui/icons';
-import { templateGlyph, templateName } from '../ui/glyphs';
 
 export function BoardView() {
   const { id } = useParams<{ id: string }>();
@@ -55,8 +54,6 @@ export function BoardView() {
   const myUserId = user.id;
   const isOwner = state.ownerId === myUserId;
   const view = sortedOrder(state.order, state.cards, sortOn);
-  const tpl = state.template ?? '';
-  const g = templateGlyph(tpl);
 
   const activeCard = activeId ? state.cards[activeId] : null;
 
@@ -99,10 +96,10 @@ export function BoardView() {
           <Icon name="back" size={18} />
         </Link>
         <div className="title">
-          <Glyph tone={g.tone} icon={g.icon} size={30} />
+          <Glyph tone={state.glyph.tone} icon={state.glyph.icon} size={30} />
           <div>
             <div className="kicker">Retro board</div>
-            <h1>{templateName(tpl)}</h1>
+            <h1>{state.templateName}</h1>
           </div>
         </div>
         <div className="spacer" />

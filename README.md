@@ -3,6 +3,11 @@
 A small real-time collaborative retrospective board — an [EasyRetro](https://easyretro.io)-style
 clone you can self-host on Cloudflare's edge.
 
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Amrit0991/open-retro)
+
+> The Deploy button requires a **public** repo and the **Workers Paid** plan, and needs three
+> post-deploy settings (`APP_ORIGIN`, email `DOMAIN`, schema seed). See [Deployment](#deployment).
+
 ## Overview
 
 - **Frontend:** a Vite + React single-page app.
@@ -103,46 +108,61 @@ npx playwright install chromium
 
 ## Deployment
 
-You need a Cloudflare account on the **Workers Paid** plan — required to send magic-link email to
-arbitrary recipients via Cloudflare Email Service — with D1 enabled.
+The Worker, the `BoardRoom` Durable Object, and the D1 database are all declared in `wrangler.jsonc`,
+so they're provisioned together. The app needs the **Workers Paid** plan (SQLite Durable Objects +
+sending email to arbitrary recipients).
 
-### 1. Create the D1 database
+### One-click: Deploy to Cloudflare
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Amrit0991/open-retro)
+
+The button clones the repo into your own GitHub account, **auto-provisions the D1 database and the
+Durable Object** (reading `wrangler.jsonc` and writing back the real resource IDs), runs the `build`
+script, then runs the `deploy` script — which **seeds the D1 schema** and `wrangler deploy`s. It
+**only works on a public repository.**
+
+Three things the button can't do for you — set them after the first deploy, then redeploy:
+
+1. **`APP_ORIGIN`** — set this var to your deployed **https** URL. The session cookie is only marked
+   `Secure` when `APP_ORIGIN` is `https`, and magic-link URLs are built from it, so auth won't work
+   until this points at the real origin.
+2. **Email domain + `DOMAIN`** — onboard a sending domain under **Email → Email Service** (Cloudflare
+   auto-adds MX / SPF / DKIM / DMARC) and set the `DOMAIN` var to it; the magic-link `from` is
+   `login@${DOMAIN}`, so it must be on the onboarded domain.
+3. **Workers Paid** — required for the SQLite Durable Object and arbitrary-recipient email.
+
+### Manual / CLI deploy
+
+#### 1. Create the D1 database
 
 ```bash
 npx wrangler d1 create open-retro
 ```
 
-Copy the printed `database_id` into `wrangler.jsonc`, replacing the `local-dev-placeholder`
-value under `d1_databases`.
+Copy the printed `database_id` into `wrangler.jsonc`, replacing the `local-dev-placeholder` value.
 
-### 2. Onboard a sending domain and set `DOMAIN`
+#### 2. Onboard a sending domain and set `DOMAIN`
 
-In the Cloudflare dashboard, onboard a sending domain under **Email → Email Service**. Cloudflare
-adds the required MX / SPF / DKIM / DMARC DNS records automatically (instant on Cloudflare-managed
-DNS, up to ~24h elsewhere). Then set the `DOMAIN` var in `wrangler.jsonc` to that domain — the
-magic-link `from` address is `login@${DOMAIN}`, so it must be on the onboarded domain. No API key or
-secret is needed; sending goes through the Worker's `EMAIL` send binding.
+In the Cloudflare dashboard, onboard a sending domain under **Email → Email Service** (auto-adds the
+MX / SPF / DKIM / DMARC records — instant on Cloudflare-managed DNS, up to ~24h elsewhere). Set the
+`DOMAIN` var in `wrangler.jsonc` to that domain. No API key or secret is needed.
 
-### 3. Set `APP_ORIGIN` to the production URL
+#### 3. Set `APP_ORIGIN` to the production URL
 
 Set the `APP_ORIGIN` var in `wrangler.jsonc` to your production **https** URL.
 
 > **Important:** the session cookie's `Secure` attribute is enabled only when `APP_ORIGIN` starts
-> with `https`. This lets local `http` dev work, but **production MUST use an `https` `APP_ORIGIN`**
-> or the session cookie will not be marked `Secure`.
+> with `https`. This lets local `http` dev work, but **production MUST use an `https` `APP_ORIGIN`**.
 
-### 4. Build and deploy
+#### 4. Build and deploy
 
 ```bash
 npm run build
-npx wrangler deploy
+npm run deploy   # seeds the D1 schema (idempotent), then `wrangler deploy`
 ```
 
-### 5. Apply the schema to the remote D1
-
-```bash
-npx wrangler d1 execute open-retro --remote --file=src/worker/db/schema.sql
-```
+The `deploy` script applies `src/worker/db/schema.sql` to the remote D1 (via the `DB` binding) before
+deploying; the schema uses `CREATE TABLE IF NOT EXISTS`, so it's safe to re-run on every deploy.
 
 ## Maintenance
 

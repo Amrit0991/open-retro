@@ -10,7 +10,8 @@
     "test": "vitest run --project worker",
     "test:ws": "vitest run --project worker-ws --no-isolate --max-workers=1",
     "test:client": "vitest run --project client",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "deploy": "wrangler d1 execute DB --remote --file=src/worker/db/schema.sql -y && wrangler deploy"
   },
   "keywords": [],
   "author": "",

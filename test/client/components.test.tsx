@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { LoginPage } from '../../src/client/auth/LoginPage';
 import { CreateBoardModal } from '../../src/client/boards/CreateBoardModal';
+import { TemplateBuilder } from '../../src/client/templates/TemplateBuilder';
 import { BoardListPage } from '../../src/client/boards/BoardList';
 import { api } from '../../src/client/api';
 import { computeNeighbors, resolveMove } from '../../src/client/board/dnd';
@@ -130,6 +131,18 @@ it('keeps the modal open and shows an error when create rejects', async () => {
   expect(await dialog.findByText(/couldn't create/i)).toBeInTheDocument();
   expect(onClose).not.toHaveBeenCalled(); // modal stays open
   expect(dialog.getByRole('button', { name: /create/i })).toBeInTheDocument();
+});
+
+it('builds a template and calls onSave with name + columns', async () => {
+  const onSave = vi.fn().mockResolvedValue(undefined);
+  render(<TemplateBuilder onSave={onSave} onClose={() => {}} />);
+  await userEvent.type(screen.getByLabelText(/template name/i), 'Quick Retro');
+  await userEvent.type(screen.getAllByLabelText(/column title/i)[0], 'Keep');
+  await userEvent.click(screen.getByRole('button', { name: /add column/i }));
+  await userEvent.type(screen.getAllByLabelText(/column title/i)[1], 'Drop');
+  await userEvent.click(screen.getByRole('button', { name: /save template/i }));
+  expect(onSave).toHaveBeenCalledWith({ name: 'Quick Retro', columns: [
+    { title: 'Keep', subtitle: '', tone: 'slate' }, { title: 'Drop', subtitle: '', tone: 'slate' }] });
 });
 
 it('shows an error message when the board list fails to load', async () => {

@@ -63,7 +63,11 @@ export function BoardListPage() {
         )}
 
         {loaded && !loadError && boards.length === 0 ? (
-          <button className="add-card-cta" onClick={() => setOpen(true)} style={{ minHeight: 180 }}>
+          <button
+            className="add-card-cta"
+            onClick={() => setOpen(true)}
+            style={{ width: 320, minHeight: 240 }}
+          >
             <Glyph tone="green" icon="plus" size={40} />
             New board
           </button>

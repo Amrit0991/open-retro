@@ -3,6 +3,7 @@ import type { Env } from './types';
 import { authRoutes } from './auth/routes';
 import { requireOrigin, requireSession } from './auth/middleware';
 import { boardRoutes } from './boards/routes';
+import { templateRoutes } from './templates/routes';
 import { handleWsUpgrade } from './ws';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -27,6 +28,7 @@ app.get('/api/me', requireSession, async (c) => {
 // session middleware). The ws handler does its own session + origin + membership checks.
 app.get('/api/boards/:id/ws', (c) => handleWsUpgrade(c));
 app.route('/api/boards', boardRoutes);
+app.route('/api/templates', templateRoutes);
 
 // Wrap app.fetch (don't pass the method reference) so Hono's `this` binding survives
 // alongside the scheduled handler in the default export.

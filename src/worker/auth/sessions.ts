@@ -46,7 +46,9 @@ export async function deleteSession(env: Env, raw: string | undefined): Promise<
 export function setSessionCookie(c: Context<{ Bindings: Env }>, raw: string) {
   setCookie(c, 'session', raw, {
     httpOnly: true,
-    secure: true,
+    // Secure in production (APP_ORIGIN is https) but dropped for local http E2E,
+    // where Chromium would otherwise refuse to send the cookie back over ws://.
+    secure: c.env.APP_ORIGIN.startsWith('https'),
     sameSite: 'Lax',
     path: '/',
     maxAge: SESSION_TTL_MS / 1000,

@@ -12,6 +12,10 @@
   "durable_objects": {
     "bindings": [{ "name": "BOARDROOM", "class_name": "BoardRoom" }]
   },
+  // Cloudflare Email Service outbound send binding (magic-link email). No API key/secret.
+  // Sending to arbitrary recipients needs the Workers Paid plan + an onboarded sending
+  // domain (dashboard auto-adds MX/SPF/DKIM/DMARC). The `from` domain must be DOMAIN below.
+  "send_email": [{ "name": "EMAIL" }],
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["BoardRoom"] }],
   "d1_databases": [
     {
@@ -24,6 +28,8 @@
       "database_id": "local-dev-placeholder"
     }
   ],
-  "vars": { "APP_ORIGIN": "http://localhost:8787" },
+  // DOMAIN = your onboarded Cloudflare sending domain (the magic-link "from" address).
+  // Local dev uses AUTH_TEST_MODE so no real email is sent; set the real domain for deploy.
+  "vars": { "APP_ORIGIN": "http://localhost:8787", "DOMAIN": "localhost" },
   "triggers": { "crons": ["0 * * * *"] }
 }

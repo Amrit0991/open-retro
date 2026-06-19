@@ -12,7 +12,8 @@ clone you can self-host on Cloudflare's edge.
   cards / votes / columns and the set of connected WebSocket clients.
 - **Persistence & registry:** Cloudflare D1 holds auth (users, sessions, magic tokens) and the
   board registry (boards + memberships).
-- **Email:** [Resend](https://resend.com) sends magic-link login emails.
+- **Email:** [Cloudflare Email Service](https://developers.cloudflare.com/email-service/) sends
+  magic-link login emails via the Worker's `EMAIL` send binding — no third-party service or API key.
 
 ### Features
 
@@ -59,18 +60,17 @@ npx wrangler d1 execute open-retro --local --file=src/worker/db/schema.sql
 This creates the local Miniflare D1 database and applies the tables. No Cloudflare auth is required
 for the `--local` flag.
 
-### 3. Configure secrets / vars
+### 3. Configure local vars
 
 Create a `.dev.vars` file (gitignored) at the repo root:
 
 ```ini
-RESEND_API_KEY=...        # any value works locally if AUTH_TEST_MODE=1
 AUTH_TEST_MODE=1          # skips real email; see below
 ```
 
-With `AUTH_TEST_MODE=1`, `POST /api/auth/request` short-circuits the Resend mailer and returns a
-`devUrl` in its JSON response. Open that URL in the browser to log in without sending real email.
-You can also pass this flag on the CLI instead of `.dev.vars`:
+No email credentials are needed for local dev. With `AUTH_TEST_MODE=1`, `POST /api/auth/request`
+skips sending email and returns a `devUrl` in its JSON response. Open that URL in the browser to log
+in without sending real email. You can also pass this flag on the CLI instead of `.dev.vars`:
 `npm run dev -- --var AUTH_TEST_MODE:1`.
 
 ### 4. Build and run
@@ -103,7 +103,8 @@ npx playwright install chromium
 
 ## Deployment
 
-You need a Cloudflare account with Workers + D1, and a Resend account.
+You need a Cloudflare account on the **Workers Paid** plan — required to send magic-link email to
+arbitrary recipients via Cloudflare Email Service — with D1 enabled.
 
 ### 1. Create the D1 database
 
@@ -114,11 +115,13 @@ npx wrangler d1 create open-retro
 Copy the printed `database_id` into `wrangler.jsonc`, replacing the `local-dev-placeholder`
 value under `d1_databases`.
 
-### 2. Set the Resend secret
+### 2. Onboard a sending domain and set `DOMAIN`
 
-```bash
-npx wrangler secret put RESEND_API_KEY
-```
+In the Cloudflare dashboard, onboard a sending domain under **Email → Email Service**. Cloudflare
+adds the required MX / SPF / DKIM / DMARC DNS records automatically (instant on Cloudflare-managed
+DNS, up to ~24h elsewhere). Then set the `DOMAIN` var in `wrangler.jsonc` to that domain — the
+magic-link `from` address is `login@${DOMAIN}`, so it must be on the onboarded domain. No API key or
+secret is needed; sending goes through the Worker's `EMAIL` send binding.
 
 ### 3. Set `APP_ORIGIN` to the production URL
 
@@ -128,20 +131,14 @@ Set the `APP_ORIGIN` var in `wrangler.jsonc` to your production **https** URL.
 > with `https`. This lets local `http` dev work, but **production MUST use an `https` `APP_ORIGIN`**
 > or the session cookie will not be marked `Secure`.
 
-### 4. Set a verified sender address
-
-In `src/worker/auth/mailer.ts`, replace the placeholder `from:` address with one on a
-**Resend-verified domain** (DKIM / SPF / DMARC configured in Resend). Magic-link delivery fails until
-the sending domain is verified.
-
-### 5. Build and deploy
+### 4. Build and deploy
 
 ```bash
 npm run build
 npx wrangler deploy
 ```
 
-### 6. Apply the schema to the remote D1
+### 5. Apply the schema to the remote D1
 
 ```bash
 npx wrangler d1 execute open-retro --remote --file=src/worker/db/schema.sql

@@ -13,8 +13,8 @@ const worker = defineProject({
   plugins: [
     cloudflareTest({
       wrangler: { configPath: './wrangler.jsonc' },
-      // Test-only var: short-circuits the Resend mailer so auth tests never make
-      // real outbound fetches. Lives here (not wrangler.jsonc) to keep dev/prod clean.
+      // Test-only var: short-circuits the email mailer so auth tests never send
+      // real email. Lives here (not wrangler.jsonc) to keep dev/prod clean.
       miniflare: { bindings: { AUTH_TEST_MODE: '1' } },
     }),
   ],

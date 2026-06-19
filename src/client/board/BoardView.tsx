@@ -1,16 +1,19 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core';
 import { api } from '../api';
 import { useSession } from '../auth/useSession';
 import { useBoardSocket } from './useBoardSocket';
 import { Column } from './Column';
+import { CardOverlay } from './Card';
 import { resolveMove } from './dnd';
 import { ShareButton } from './ShareButton';
 import { SortToggle, useSortByVotes, sortedOrder } from './SortToggle';
@@ -23,6 +26,7 @@ export function BoardView() {
   const { id } = useParams<{ id: string }>();
   const { user, loading } = useSession();
   const [sortOn, toggleSort] = useSortByVotes(id ?? '');
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) api.joinBoard(id).catch(() => {});
@@ -54,7 +58,13 @@ export function BoardView() {
   const tpl = state.template ?? '';
   const g = templateGlyph(tpl);
 
+  const activeCard = activeId ? state.cards[activeId] : null;
+
+  const onDragStart = (e: DragStartEvent) => setActiveId(String(e.active.id));
+  const onDragCancel = () => setActiveId(null);
+
   const onDragEnd = (e: DragEndEvent) => {
+    setActiveId(null);
     if (!e.over) return;
     const cardId = String(e.active.id);
     const over = e.over.data.current as { columnId?: string; index?: number } | undefined;
@@ -105,8 +115,16 @@ export function BoardView() {
       {sortOn ? (
         columns
       ) : (
-        <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+        <DndContext
+          sensors={sensors}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          onDragCancel={onDragCancel}
+        >
           {columns}
+          <DragOverlay dropAnimation={null}>
+            {activeCard ? <CardOverlay card={activeCard} /> : null}
+          </DragOverlay>
         </DndContext>
       )}
     </>

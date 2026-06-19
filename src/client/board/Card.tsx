@@ -32,13 +32,18 @@ export function Card({
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : undefined,
   };
 
   const initial = (card.authorName || '?').trim().charAt(0).toUpperCase();
 
   return (
-    <div ref={setNodeRef} className="card" style={style} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      className={`card${isDragging ? ' dragging' : ''}`}
+      style={style}
+      {...attributes}
+      {...listeners}
+    >
       {canModify && (
         <button className="card-del" aria-label="delete" onClick={onDelete}>
           <Icon name="trash" size={14} />
@@ -60,6 +65,26 @@ export function Card({
           <button aria-label="upvote" onClick={onVote}>
             <Icon name="plus" size={15} />
           </button>
+        </span>
+      </footer>
+    </div>
+  );
+}
+
+// The floating clone rendered in the DragOverlay while a card is held. Static
+// (no sortable hooks / buttons) so it tracks the cursor smoothly across columns.
+export function CardOverlay({ card }: { card: CardT }) {
+  const initial = (card.authorName || '?').trim().charAt(0).toUpperCase();
+  return (
+    <div className="card card-overlay">
+      <p className="card-text">{card.text}</p>
+      <footer className="card-foot">
+        <span className="author">
+          <span className="avatar">{initial}</span>
+          <span className="name">{card.authorName}</span>
+        </span>
+        <span className="vote">
+          <span className="n">{card.votes}</span>
         </span>
       </footer>
     </div>

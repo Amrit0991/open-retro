@@ -595,6 +595,19 @@ select {
 .card:hover {
   box-shadow: var(--shadow-lift);
 }
+/* The source card stays as a faint placeholder slot while its clone is held. */
+.card.dragging {
+  opacity: 0.35;
+}
+/* The floating clone in the DragOverlay — lifted, follows the cursor. */
+.card-overlay {
+  width: 300px;
+  margin: 0;
+  cursor: grabbing;
+  box-shadow: var(--shadow-pop);
+  transform: scale(1.02);
+  border-color: var(--line-2);
+}
 .card .card-text {
   margin: 0 0 11px;
   font-size: 14px;

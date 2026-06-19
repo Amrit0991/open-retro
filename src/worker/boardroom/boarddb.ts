@@ -126,7 +126,7 @@ export class BoardDb {
     return {
       meta: {
         templateName: m.templateName,
-        maxVotes: Number(m.maxVotes),
+        maxVotes: m.maxVotes,
         ownerId: m.ownerId,
         glyph: { tone: m.glyph.tone as ColumnDef['tone'], icon: m.glyph.icon },
       },

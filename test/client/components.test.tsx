@@ -112,6 +112,7 @@ it('submits email and shows the check-inbox confirmation', async () => {
 });
 
 it('creates a board with chosen template and votes', async () => {
+  vi.spyOn(api, 'listTemplates').mockResolvedValue({ builtins: [], custom: [] } as any);
   const onCreate = vi.fn().mockResolvedValue({ id: 'b1' });
   render(
     <MemoryRouter>
@@ -127,6 +128,7 @@ it('creates a board with chosen template and votes', async () => {
 });
 
 it('keeps the modal open and shows an error when create rejects', async () => {
+  vi.spyOn(api, 'listTemplates').mockResolvedValue({ builtins: [], custom: [] } as any);
   const onCreate = vi.fn().mockRejectedValue(new Error('400'));
   const onClose = vi.fn();
   const { getByRole } = render(

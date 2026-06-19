@@ -868,6 +868,10 @@ select {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 12px;
 }
+.tmpl-cta {
+  width: 320px;
+  min-height: 180px;
+}
 .tmpl-row {
   display: flex;
   align-items: center;

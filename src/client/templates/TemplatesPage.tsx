@@ -97,11 +97,7 @@ export function TemplatesPage() {
         <section className="tmpl-section">
           <h2 className="tmpl-section-title">Your templates</h2>
           {list.custom.length === 0 ? (
-            <button
-              className="add-card-cta"
-              onClick={() => setBuilder({})}
-              style={{ width: 320, minHeight: 180 }}
-            >
+            <button className="add-card-cta tmpl-cta" onClick={() => setBuilder({})}>
               <Glyph tone="green" icon="plus" size={40} />
               New template
             </button>

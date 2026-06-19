@@ -28,7 +28,14 @@ export async function handleWsUpgrade(c: Context<{ Bindings: Env }>): Promise<Re
 
   // Resolve the board's column/glyph snapshot from the typed stored field
   // (boards created before the template-builder feature fall back to a built-in).
-  const snapshot = boardSnapshot(board);
+  // A legacy/corrupted ref (no stored snapshot + non-built-in template) yields
+  // null — fall back to a column-less placeholder so the board still LOADS,
+  // mirroring the REST path's guard rather than seeding `null` and crashing.
+  const snapshot = boardSnapshot(board) ?? {
+    name: board.template,
+    glyph: { tone: 'slate' as const, icon: 'layers' },
+    columns: [],
+  };
 
   const stub = c.env.BOARDROOM.get(c.env.BOARDROOM.idFromName(boardId));
   const fwd = new Request(c.req.url, {

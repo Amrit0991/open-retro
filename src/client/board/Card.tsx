@@ -1,6 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Card as CardT } from '../../shared/protocol';
+import { Icon } from '../ui/icons';
 
 export function Card({
   card,
@@ -34,23 +35,32 @@ export function Card({
     opacity: isDragging ? 0.5 : undefined,
   };
 
+  const initial = (card.authorName || '?').trim().charAt(0).toUpperCase();
+
   return (
     <div ref={setNodeRef} className="card" style={style} {...attributes} {...listeners}>
-      <p>{card.text}</p>
-      <footer>
-        <span className="author">{card.authorName}</span>
-        <button aria-label="downvote" onClick={onUnvote} disabled={mine === 0}>
-          −
+      {canModify && (
+        <button className="card-del" aria-label="delete" onClick={onDelete}>
+          <Icon name="trash" size={14} />
         </button>
-        <span aria-label="votes">{card.votes}</span>
-        <button aria-label="upvote" onClick={onVote}>
-          +
-        </button>
-        {canModify && (
-          <button aria-label="delete" onClick={onDelete}>
-            🗑
+      )}
+      <p className="card-text">{card.text}</p>
+      <footer className="card-foot">
+        <span className="author">
+          <span className="avatar">{initial}</span>
+          <span className="name">{card.authorName}</span>
+        </span>
+        <span className={`vote${mine > 0 ? ' mine' : ''}`}>
+          <button aria-label="downvote" onClick={onUnvote} disabled={mine === 0}>
+            <Icon name="minus" size={15} />
           </button>
-        )}
+          <span className="n" aria-label="votes">
+            {card.votes}
+          </span>
+          <button aria-label="upvote" onClick={onVote}>
+            <Icon name="plus" size={15} />
+          </button>
+        </span>
       </footer>
     </div>
   );

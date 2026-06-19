@@ -18,7 +18,7 @@ export function AddCardInput({ onAdd }: { onAdd: (text: string) => void }) {
         aria-label="add card"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Add a card…"
+        placeholder="+  Add a card…"
       />
     </form>
   );

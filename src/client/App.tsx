@@ -2,12 +2,17 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useSession } from './auth/useSession';
 import { LoginPage } from './auth/LoginPage';
 import { api } from './api';
-import { BoardListPage } from './boards/BoardList'; // Task 18
-import { BoardView } from './board/BoardView'; // Task 19
+import { BoardListPage } from './boards/BoardList';
+import { BoardView } from './board/BoardView';
 
 export function App() {
   const { user, loading } = useSession();
-  if (loading) return <p>Loading…</p>;
+  if (loading)
+    return (
+      <div className="app-state">
+        <span className="dotting">Loading</span>
+      </div>
+    );
   return (
     <BrowserRouter>
       <Routes>

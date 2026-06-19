@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   DndContext,
   PointerSensor,
@@ -15,6 +15,9 @@ import { resolveMove } from './dnd';
 import { ShareButton } from './ShareButton';
 import { SortToggle, useSortByVotes, sortedOrder } from './SortToggle';
 import { MaxVotesSetting } from './MaxVotesSetting';
+import { Glyph } from '../ui/Glyph';
+import { Icon } from '../ui/icons';
+import { templateGlyph, templateName } from '../ui/glyphs';
 
 export function BoardView() {
   const { id } = useParams<{ id: string }>();
@@ -31,13 +34,25 @@ export function BoardView() {
   // vote +/− and delete buttons isn't swallowed by the drag listeners.
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  if (loading) return <p>Loading…</p>;
-  if (!user) return <p>Not signed in.</p>;
-  if (!state.ready) return <p>Connecting…</p>;
+  if (loading)
+    return (
+      <div className="app-state">
+        <span className="dotting">Loading</span>
+      </div>
+    );
+  if (!user) return <div className="app-state">Not signed in.</div>;
+  if (!state.ready)
+    return (
+      <div className="app-state">
+        <span className="dotting">Connecting</span>
+      </div>
+    );
 
   const myUserId = user.id;
   const isOwner = state.ownerId === myUserId;
   const view = sortedOrder(state.order, state.cards, sortOn);
+  const tpl = state.template ?? '';
+  const g = templateGlyph(tpl);
 
   const onDragEnd = (e: DragEndEvent) => {
     if (!e.over) return;
@@ -68,10 +83,21 @@ export function BoardView() {
   );
 
   return (
-    <main className="board">
-      <header className="board-header">
-        <ShareButton boardId={id ?? ''} />
+    <>
+      <header className="board-bar">
+        <Link to="/" className="icon-btn" aria-label="Back to boards">
+          <Icon name="back" size={18} />
+        </Link>
+        <div className="title">
+          <Glyph tone={g.tone} icon={g.icon} size={30} />
+          <div>
+            <div className="kicker">Retro board</div>
+            <h1>{templateName(tpl)}</h1>
+          </div>
+        </div>
+        <div className="spacer" />
         <SortToggle on={sortOn} toggle={toggleSort} />
+        <ShareButton boardId={id ?? ''} />
         {isOwner && <MaxVotesSetting value={state.maxVotes} onChange={actions.setMaxVotes} />}
       </header>
       {/* Drag is disabled while sorted by votes: neighbor ids from vote-order
@@ -83,6 +109,6 @@ export function BoardView() {
           {columns}
         </DndContext>
       )}
-    </main>
+    </>
   );
 }

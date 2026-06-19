@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Card } from '../../shared/protocol';
+import { Icon } from '../ui/icons';
 
 // Pure helper: returns a new order map with each column's ids sorted by votes
 // (desc, tie-broken by position asc) when byVotes is true; otherwise returns
@@ -32,8 +33,11 @@ export function useSortByVotes(boardId: string): [boolean, () => void] {
 
 export function SortToggle({ on, toggle }: { on: boolean; toggle: () => void }) {
   return (
-    <button type="button" aria-pressed={on} onClick={toggle}>
-      Sort by votes: {on ? 'on' : 'off'}
+    <button type="button" className="btn" aria-pressed={on} onClick={toggle}>
+      <span className="icon-c">
+        <Icon name="bars" size={16} />
+      </span>
+      Sort by votes
     </button>
   );
 }

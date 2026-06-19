@@ -21,7 +21,7 @@
     {
       "binding": "DB",
       "database_name": "open-retro",
-      // PLACEHOLDER: before any REMOTE deploy, run `npx wrangler d1 create open-retro`
+      // PLACEHOLDER: before any REMOTE deploy, run `bunx wrangler d1 create open-retro`
       // and replace this id with the real one it prints.
       // Local dev (`wrangler dev`) and @cloudflare/vitest-pool-workers use a local
       // Miniflare D1 and do NOT need a real database_id.

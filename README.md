@@ -47,19 +47,19 @@ src/
 
 ## Local development
 
-Requires Node 18+ and npm. No Cloudflare account is needed for local dev — Wrangler runs a local
+Requires [Bun](https://bun.sh). No Cloudflare account is needed for local dev — Wrangler runs a local
 Miniflare D1 and Durable Object.
 
 ### 1. Install
 
 ```bash
-npm install
+bun install
 ```
 
 ### 2. Create the local D1 and apply the schema
 
 ```bash
-npx wrangler d1 execute open-retro --local --file=src/worker/db/schema.sql
+bunx wrangler d1 execute open-retro --local --file=src/worker/db/schema.sql
 ```
 
 This creates the local Miniflare D1 database and applies the tables. No Cloudflare auth is required
@@ -76,25 +76,29 @@ AUTH_TEST_MODE=1          # skips real email; see below
 No email credentials are needed for local dev. With `AUTH_TEST_MODE=1`, `POST /api/auth/request`
 skips sending email and returns a `devUrl` in its JSON response. Open that URL in the browser to log
 in without sending real email. You can also pass this flag on the CLI instead of `.dev.vars`:
-`npm run dev -- --var AUTH_TEST_MODE:1`.
+`bun run dev -- --var AUTH_TEST_MODE:1`.
 
 ### 4. Build and run
 
 ```bash
-npm run build      # vite build → dist/ (served by the Worker as static assets)
-npm run dev        # wrangler dev (default http://localhost:8787)
+bun run build      # vite build → dist/ (served by the Worker as static assets)
+bun run dev        # wrangler dev (default http://localhost:8787)
 ```
 
-`npm run dev` serves the built SPA from `dist/`, so re-run `npm run build` after frontend changes.
+`bun run dev` serves the built SPA from `dist/`, so re-run `bun run build` after frontend changes.
 
 ## Tests
 
-| Command              | What it covers                                                         |
-| -------------------- | ---------------------------------------------------------------------- |
-| `npm test`           | Worker / Durable Object / D1 logic via `@cloudflare/vitest-pool-workers` |
-| `npm run test:ws`    | WebSocket transport (run no-isolate / single-worker — see note below)  |
-| `npm run test:client`| React reducer, `useBoardSocket` hook, and components (happy-dom)        |
-| `npm run e2e`        | Playwright golden-path + a two-client realtime test                    |
+Tests run on **Vitest** (not `bun test`). The Worker/DO/D1 suite runs inside `workerd` via
+`@cloudflare/vitest-pool-workers`, which only works under Vitest — so always invoke the scripts with
+**`bun run <name>`**, never `bun test` (that would launch Bun's own runner and bypass Vitest).
+
+| Command                | What it covers                                                         |
+| ---------------------- | ---------------------------------------------------------------------- |
+| `bun run test`         | Worker / Durable Object / D1 logic via `@cloudflare/vitest-pool-workers` |
+| `bun run test:ws`      | WebSocket transport (no-isolate / single-worker — see note below)      |
+| `bun run test:client`  | React reducer, `useBoardSocket` hook, and components (happy-dom)        |
+| `bun run e2e`          | Playwright golden-path + a two-client realtime test                    |
 
 WebSockets are incompatible with vitest-pool-workers' per-test storage isolation, so the WS suite is
 split into its own project and run with `--no-isolate --max-workers=1` (already wired into the
@@ -103,7 +107,7 @@ split into its own project and run with `--no-isolate --max-workers=1` (already 
 Before the first E2E run, install the browser:
 
 ```bash
-npx playwright install chromium
+bunx playwright install chromium
 ```
 
 ## Deployment
@@ -136,7 +140,7 @@ Three things the button can't do for you — set them after the first deploy, th
 #### 1. Create the D1 database
 
 ```bash
-npx wrangler d1 create open-retro
+bunx wrangler d1 create open-retro
 ```
 
 Copy the printed `database_id` into `wrangler.jsonc`, replacing the `local-dev-placeholder` value.
@@ -157,8 +161,8 @@ Set the `APP_ORIGIN` var in `wrangler.jsonc` to your production **https** URL.
 #### 4. Build and deploy
 
 ```bash
-npm run build
-npm run deploy   # seeds the D1 schema (idempotent), then `wrangler deploy`
+bun run build
+bun run deploy   # seeds the D1 schema (idempotent), then `wrangler deploy`
 ```
 
 The `deploy` script applies `src/worker/db/schema.sql` to the remote D1 (via the `DB` binding) before

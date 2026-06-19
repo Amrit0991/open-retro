@@ -5,7 +5,7 @@ import { defineConfig, defineProject } from 'vitest/config';
 // This pool version removed `defineWorkersConfig` and the `test.poolOptions.workers`
 // surface. The current API is the `cloudflareTest({ wrangler: { configPath } })` Vite
 // plugin used per-project. There are no `singleWorker`/`isolatedStorage` options, so the
-// WS project's no-isolate behavior is set in the `test:ws` npm script via
+// WS project's no-isolate behavior is set in the `test:ws` script via
 // `--no-isolate --max-workers=1` (see package.json).
 
 // Worker/DO unit + integration tests (per-test isolated storage).

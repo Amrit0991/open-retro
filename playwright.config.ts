@@ -12,7 +12,7 @@ export default defineConfig({
   fullyParallel: false,
   webServer: {
     command:
-      'npx wrangler d1 execute open-retro --local --file=src/worker/db/schema.sql && npm run build && npx wrangler dev --port 8787 --var AUTH_TEST_MODE:1',
+      'bunx wrangler d1 execute open-retro --local --file=src/worker/db/schema.sql && bun run build && bunx wrangler dev --port 8787 --var AUTH_TEST_MODE:1',
     url: 'http://localhost:8787',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

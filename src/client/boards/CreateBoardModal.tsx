@@ -12,14 +12,20 @@ export function CreateBoardModal({
   const [name, setName] = useState('');
   const [template, setTemplate] = useState<TemplateId>('three_little_pigs');
   const [maxVotes, setMaxVotes] = useState(6);
+  const [error, setError] = useState(false);
 
   return (
     <div role="dialog" aria-label="Create board">
       <form
         onSubmit={async (e) => {
           e.preventDefault();
-          await onCreate({ name, template, maxVotes });
-          onClose();
+          setError(false);
+          try {
+            await onCreate({ name, template, maxVotes });
+            onClose();
+          } catch {
+            setError(true); // keep the modal open so the user can retry
+          }
         }}
       >
         <label htmlFor="b-name">Name</label>
@@ -45,6 +51,7 @@ export function CreateBoardModal({
           value={maxVotes}
           onChange={(e) => setMaxVotes(Number(e.target.value))}
         />
+        {error && <p role="alert">Couldn't create the board. Please try again.</p>}
         <button type="submit">Create</button>
         <button type="button" onClick={onClose}>
           Cancel

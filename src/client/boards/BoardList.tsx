@@ -12,11 +12,15 @@ interface BoardSummary {
 
 export function BoardListPage() {
   const [boards, setBoards] = useState<BoardSummary[]>([]);
+  const [loadError, setLoadError] = useState(false);
   const [open, setOpen] = useState(false);
   const nav = useNavigate();
 
   useEffect(() => {
-    api.listBoards().then((list) => setBoards(list as BoardSummary[]));
+    api
+      .listBoards()
+      .then((list) => setBoards(list as BoardSummary[]))
+      .catch(() => setLoadError(true));
   }, []);
 
   return (
@@ -25,6 +29,7 @@ export function BoardListPage() {
         <h1>Your retros</h1>
         <button onClick={() => setOpen(true)}>Add board</button>
       </header>
+      {loadError && <p role="alert">Couldn't load your boards. Refresh to try again.</p>}
       <div className="board-grid">
         {boards.map((b) => (
           <BoardCard key={b.id} board={b} />

@@ -1,10 +1,17 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, cleanup, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { LoginPage } from '../../src/client/auth/LoginPage';
 import { CreateBoardModal } from '../../src/client/boards/CreateBoardModal';
+import { BoardListPage } from '../../src/client/boards/BoardList';
+import { api } from '../../src/client/api';
 import { computeNeighbors, resolveMove } from '../../src/client/board/dnd';
 import { sortedOrder } from '../../src/client/board/SortToggle';
+
+// happy-dom + RTL don't auto-unmount between tests in this project; clean up so
+// rendered DOM (e.g. a still-open modal) doesn't leak duplicate elements.
+afterEach(cleanup);
 
 it('computes neighbors for a drop position', () => {
   const ids = ['a', 'b', 'c'];
@@ -111,4 +118,27 @@ it('creates a board with chosen template and votes', async () => {
   await userEvent.type(screen.getByLabelText(/max votes/i), '5');
   await userEvent.click(screen.getByRole('button', { name: /create/i }));
   expect(onCreate).toHaveBeenCalledWith({ name: 'Sprint 13', template: 'sailboat', maxVotes: 5 });
+});
+
+it('keeps the modal open and shows an error when create rejects', async () => {
+  const onCreate = vi.fn().mockRejectedValue(new Error('400'));
+  const onClose = vi.fn();
+  const { getByRole } = render(<CreateBoardModal onCreate={onCreate} onClose={onClose} />);
+  const dialog = within(getByRole('dialog'));
+  await userEvent.type(dialog.getByLabelText(/name/i), 'Sprint 13');
+  await userEvent.click(dialog.getByRole('button', { name: /create/i }));
+  expect(await dialog.findByText(/couldn't create/i)).toBeInTheDocument();
+  expect(onClose).not.toHaveBeenCalled(); // modal stays open
+  expect(dialog.getByRole('button', { name: /create/i })).toBeInTheDocument();
+});
+
+it('shows an error message when the board list fails to load', async () => {
+  const spy = vi.spyOn(api, 'listBoards').mockRejectedValue(new Error('401'));
+  render(
+    <MemoryRouter>
+      <BoardListPage />
+    </MemoryRouter>,
+  );
+  expect(await screen.findByText(/couldn't load your boards/i)).toBeInTheDocument();
+  spy.mockRestore();
 });

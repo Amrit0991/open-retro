@@ -27,6 +27,16 @@ it('optimistic add then card_added with same id dedupes (no double render)', () 
   expect(s.order.straws).toEqual(['cc1']); // exactly once
 });
 
+it('optimistic add then card_added with a MISMATCHED server id reconciles by clientCardId (no orphan)', () => {
+  let s = reducer(initialState, srv({ type: 'init', snapshot: snap }));
+  // Client inserts under its own id; server rejected the format and minted a new uuid.
+  const optimistic = { id: 'cc-bad', columnId: 'straws', text: 'hi', authorId: 'me', authorName: 'Me', position: 1024, createdAt: 1, votes: 0 };
+  s = reducer(s, { kind: 'optimistic_add', card: optimistic });
+  const real = { ...optimistic, id: 'real-uuid' };
+  s = reducer(s, srv({ type: 'card_added', card: real, clientCardId: 'cc-bad' }));
+  expect(s.order.straws).toEqual(['real-uuid']); // optimistic 'cc-bad' removed, real card kept once
+});
+
 it('votes_changed sets the total (never increments)', () => {
   let s = reducer(initialState, srv({ type: 'init', snapshot: { ...snap, cards: [{ id: 'c', columnId: 'straws', text: 't', authorId: 'a', authorName: 'A', position: 1024, createdAt: 1, votes: 0 }] } }));
   s = reducer(s, srv({ type: 'votes_changed', cardId: 'c', total: 2 }));

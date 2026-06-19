@@ -59,7 +59,12 @@ export function reducer(state: BoardState, action: Action): BoardState {
 
   switch (msg.type) {
     case 'card_added': {
-      const cards = { ...state.cards, [msg.card.id]: msg.card }; // upsert-by-id
+      // Reconcile by clientCardId (the optimistic key), then upsert the real card
+      // by its server id. If the server minted a different id (bad client id format),
+      // this drops the orphaned optimistic card instead of double-rendering.
+      const cards = { ...state.cards };
+      if (msg.clientCardId && msg.clientCardId !== msg.card.id) delete cards[msg.clientCardId];
+      cards[msg.card.id] = msg.card;
       return { ...state, cards, order: rebuildOrder(state.columns, cards) };
     }
     case 'card_edited': {

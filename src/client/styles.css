@@ -1,0 +1,98 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #172b4d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #fafbfc;
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Board view layout */
+.board-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #dfe1e6;
+}
+
+/* Columns laid out side by side */
+.columns {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 16px;
+  padding: 16px;
+}
+
+.column {
+  background: #f4f5f7;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.column h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+
+.column p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #5e6c84;
+}
+
+/* Cards */
+.card {
+  background: #fff;
+  border-radius: 6px;
+  padding: 8px;
+  margin: 8px 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.card p {
+  margin: 0 0 6px;
+}
+
+.card footer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: #555;
+}
+
+.card footer .author {
+  margin-right: auto;
+}
+
+/* Board list page */
+.board-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  padding: 16px;
+}
+
+.board-card {
+  background: #fff;
+  border: 1px solid #dfe1e6;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.board-card h3 {
+  margin: 0 0 4px;
+}

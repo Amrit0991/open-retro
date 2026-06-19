@@ -1,6 +1,12 @@
 import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { DndContext, type DragEndEvent } from '@dnd-kit/core';
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
 import { api } from '../api';
 import { useSession } from '../auth/useSession';
 import { useBoardSocket } from './useBoardSocket';
@@ -20,6 +26,10 @@ export function BoardView() {
   }, [id]);
 
   const { state, actions } = useBoardSocket(id ?? '');
+
+  // Require a small pointer movement before a drag starts, so clicking the
+  // vote +/− and delete buttons isn't swallowed by the drag listeners.
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   if (loading) return <p>Loading…</p>;
   if (!user) return <p>Not signed in.</p>;
@@ -66,7 +76,13 @@ export function BoardView() {
       </header>
       {/* Drag is disabled while sorted by votes: neighbor ids from vote-order
           would corrupt stored positions. */}
-      {sortOn ? columns : <DndContext onDragEnd={onDragEnd}>{columns}</DndContext>}
+      {sortOn ? (
+        columns
+      ) : (
+        <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+          {columns}
+        </DndContext>
+      )}
     </main>
   );
 }

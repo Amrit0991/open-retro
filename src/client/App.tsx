@@ -3,6 +3,7 @@ import { useSession } from './auth/useSession';
 import { LoginPage } from './auth/LoginPage';
 import { api } from './api';
 import { BoardListPage } from './boards/BoardList';
+import { TemplatesPage } from './templates/TemplatesPage';
 import { BoardView } from './board/BoardView';
 
 export function App() {
@@ -18,6 +19,7 @@ export function App() {
       <Routes>
         <Route path="/login" element={<LoginPage requestMagicLink={api.requestMagicLink} />} />
         <Route path="/" element={user ? <BoardListPage /> : <Navigate to="/login" />} />
+        <Route path="/templates" element={user ? <TemplatesPage /> : <Navigate to="/login" />} />
         <Route path="/b/:id" element={user ? <BoardView /> : <Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>

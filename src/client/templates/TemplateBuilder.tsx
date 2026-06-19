@@ -104,7 +104,7 @@ export function TemplateBuilder({
                 <div className="col-tools">
                   <button
                     type="button"
-                    className="btn btn-icon"
+                    className="btn icon-btn"
                     aria-label="move column up"
                     disabled={i === 0}
                     onClick={() => dispatch({ type: 'moveColumn', key: col.key, dir: -1 })}
@@ -113,7 +113,7 @@ export function TemplateBuilder({
                   </button>
                   <button
                     type="button"
-                    className="btn btn-icon"
+                    className="btn icon-btn"
                     aria-label="move column down"
                     disabled={i === state.columns.length - 1}
                     onClick={() => dispatch({ type: 'moveColumn', key: col.key, dir: 1 })}
@@ -122,7 +122,7 @@ export function TemplateBuilder({
                   </button>
                   <button
                     type="button"
-                    className="btn btn-icon"
+                    className="btn icon-btn"
                     aria-label="remove column"
                     disabled={single}
                     onClick={() => dispatch({ type: 'removeColumn', key: col.key })}

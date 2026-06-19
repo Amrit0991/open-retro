@@ -840,6 +840,53 @@ select {
   from { opacity: 0; transform: translateY(8px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+/* ------------------------------------------------------------- Templates -- */
+.tmpl-section {
+  margin-bottom: 32px;
+}
+.tmpl-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 14px;
+}
+.tmpl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.tmpl-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-card);
+}
+.tmpl-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+.tmpl-row-tools {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+.tmpl-row .badge {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-pill);
+  padding: 3px 10px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.001ms !important;

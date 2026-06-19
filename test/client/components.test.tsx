@@ -6,6 +6,7 @@ import { LoginPage } from '../../src/client/auth/LoginPage';
 import { CreateBoardModal } from '../../src/client/boards/CreateBoardModal';
 import { TemplateBuilder } from '../../src/client/templates/TemplateBuilder';
 import { BoardListPage } from '../../src/client/boards/BoardList';
+import { TemplatesPage } from '../../src/client/templates/TemplatesPage';
 import { api } from '../../src/client/api';
 import { computeNeighbors, resolveMove } from '../../src/client/board/dnd';
 import { sortedOrder } from '../../src/client/board/SortToggle';
@@ -154,4 +155,17 @@ it('shows an error message when the board list fails to load', async () => {
   );
   expect(await screen.findByText(/couldn't load your boards/i)).toBeInTheDocument();
   spy.mockRestore();
+});
+
+it('lists built-ins and custom templates and deletes a custom one', async () => {
+  vi.spyOn(api, 'listTemplates').mockResolvedValue({
+    builtins: [{ id: 'sailboat', name: 'Sailboat', glyph: { tone: 'blue', icon: 'sail' }, columns: [], readOnly: true }],
+    custom: [{ id: 'c1', name: 'Mine', glyph: { tone: 'green', icon: 'layers' }, columns: [], readOnly: false }],
+  } as any);
+  const del = vi.spyOn(api, 'deleteTemplate').mockResolvedValue({ ok: true } as any);
+  render(<MemoryRouter><TemplatesPage /></MemoryRouter>);
+  expect(await screen.findByText('Sailboat')).toBeInTheDocument();
+  expect(screen.getByText('Mine')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: /delete mine/i }));
+  expect(del).toHaveBeenCalledWith('c1');
 });

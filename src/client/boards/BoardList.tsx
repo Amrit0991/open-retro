@@ -40,6 +40,9 @@ export function BoardListPage() {
           </span>
         </Link>
         <div className="spacer" />
+        <Link to="/templates" className="btn">
+          Templates
+        </Link>
         <button className="btn btn-primary" onClick={() => setOpen(true)}>
           <span className="icon-c">
             <Icon name="plus" size={16} />

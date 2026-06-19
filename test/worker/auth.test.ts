@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { issueToken, consumeToken } from '../../src/worker/auth/tokens';
 import { randomToken, sha256Hex } from '../../src/worker/auth/crypto';
 import { upsertUserByEmail, createSession } from '../../src/worker/auth/sessions';
+import { tooManyRecently } from '../../src/worker/auth/rateLimit';
 
 beforeEach(async () => {
   await env.DB.exec('DELETE FROM magic_tokens');
@@ -72,6 +73,15 @@ describe('verify + session', () => {
       headers: { origin: 'https://evil.example' },
     });
     expect(res.status).toBe(403);
+  });
+});
+
+describe('email rate limiting', () => {
+  it('flags more than 5 requests per email per hour', async () => {
+    await env.DB.exec('DELETE FROM magic_tokens');
+    for (let i = 0; i < 5; i++) await issueToken(env, 'spam@x.com');
+    expect(await tooManyRecently(env, 'spam@x.com')).toBe(true);
+    expect(await tooManyRecently(env, 'other@x.com')).toBe(false);
   });
 });
 

@@ -24,5 +24,6 @@
       "database_id": "local-dev-placeholder"
     }
   ],
-  "vars": { "APP_ORIGIN": "http://localhost:8787" }
+  "vars": { "APP_ORIGIN": "http://localhost:8787" },
+  "triggers": { "crons": ["0 * * * *"] }
 }

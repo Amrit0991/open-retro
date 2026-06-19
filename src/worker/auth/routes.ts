@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { getCookie } from 'hono/cookie';
 import type { Env } from '../types';
 import { issueToken, consumeToken } from './tokens';
+import { tooManyRecently } from './rateLimit';
 import { sendMagicLink } from './mailer';
 import {
   upsertUserByEmail,
@@ -17,6 +18,8 @@ authRoutes.post('/request', async (c) => {
   const { email } = await c.req
     .json<{ email?: string }>()
     .catch(() => ({ email: undefined }));
+  // Silently drop when over the per-email/hour cap — keep uniform response (no enumeration).
+  if (email && (await tooManyRecently(c.env, email))) return c.json({ ok: true });
   if (email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     const raw = await issueToken(c.env, email);
     const url = `${c.env.APP_ORIGIN}/api/auth/verify?token=${encodeURIComponent(raw)}`;

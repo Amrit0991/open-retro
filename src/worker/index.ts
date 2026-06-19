@@ -28,7 +28,19 @@ app.get('/api/me', requireSession, async (c) => {
 app.get('/api/boards/:id/ws', (c) => handleWsUpgrade(c));
 app.route('/api/boards', boardRoutes);
 
-export default app;
+// Wrap app.fetch (don't pass the method reference) so Hono's `this` binding survives
+// alongside the scheduled handler in the default export.
+const worker = {
+  fetch: (req: Request, env: Env, ctx: ExecutionContext) => app.fetch(req, env, ctx),
+  // Hourly cron: purge expired magic tokens and sessions.
+  async scheduled(_controller: ScheduledController, env: Env) {
+    const now = Date.now();
+    await env.DB.prepare('DELETE FROM magic_tokens WHERE expires_at < ?').bind(now).run();
+    await env.DB.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(now).run();
+  },
+};
+
+export default worker;
 
 // Durable Object — must be exported from the worker entry so the runtime/pool
 // can instantiate the `BoardRoom` class bound as BOARDROOM in wrangler.jsonc.

@@ -1,31 +1,24 @@
 import { Link } from 'react-router-dom';
-import { TEMPLATES } from '../../shared/templates';
 import type { Tone } from '../../shared/protocol';
 import { Glyph } from '../ui/Glyph';
-import { templateName } from '../ui/glyphs';
+import type { IconName } from '../ui/icons';
 
 export function BoardCard({
   board,
   index = 0,
 }: {
-  board: { id: string; name: string; template: string };
+  board: { id: string; name: string; templateName: string; glyph: { tone: Tone; icon: string } };
   index?: number;
 }) {
-  // Temporary: glyph from the built-in template by id (Task 5 switches to server-resolved board.glyph).
-  const g: { tone: Tone; icon: string } =
-    (TEMPLATES as Record<string, { glyph: { tone: Tone; icon: string } }>)[board.template]?.glyph ?? {
-      tone: 'slate',
-      icon: 'layers',
-    };
   return (
     <Link
       to={`/b/${board.id}`}
       className="board-card"
       style={{ animationDelay: `${index * 40}ms` }}
     >
-      <Glyph tone={g.tone} icon={g.icon} size={36} />
+      <Glyph tone={board.glyph.tone} icon={board.glyph.icon as IconName} size={36} />
       <h3>{board.name}</h3>
-      <div className="meta">{templateName(board.template)}</div>
+      <div className="meta">{board.templateName}</div>
       <div className="preview" aria-hidden="true">
         <i />
         <i />

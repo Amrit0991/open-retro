@@ -38,6 +38,44 @@ describe('boards CRUD', () => {
   });
 });
 
+describe('create from template snapshot', () => {
+  it('creates a board from a custom template and snapshots its columns', async () => {
+    const cookie = await login('o@x.com');
+    const tpl = await (await SELF.fetch('http://localhost:8787/api/templates', {
+      method: 'POST',
+      headers: { cookie, origin: 'http://localhost:8787', 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Start/Stop', columns: [
+        { title: 'Start', subtitle: '', tone: 'green' }, { title: 'Stop', subtitle: '', tone: 'coral' }] }),
+    })).json<{ id: string }>();
+    const board = await (await SELF.fetch('http://localhost:8787/api/boards', {
+      method: 'POST',
+      headers: { cookie, origin: 'http://localhost:8787', 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Sprint', template: tpl.id, maxVotes: 5 }),
+    })).json<any>();
+    expect(board.templateName).toBe('Start/Stop');
+    expect(board.glyph).toMatchObject({ tone: 'green' });
+    const row = await env.DB.prepare('SELECT template_snapshot FROM boards WHERE id=?').bind(board.id).first<{ template_snapshot: string }>();
+    const snap = JSON.parse(row!.template_snapshot);
+    expect(snap.columns.map((c: any) => c.title)).toEqual(['Start', 'Stop']);
+  });
+
+  it('rejects a board referencing someone else’s template', async () => {
+    const owner = await login('o@x.com');
+    const tpl = await (await SELF.fetch('http://localhost:8787/api/templates', {
+      method: 'POST',
+      headers: { cookie: owner, origin: 'http://localhost:8787', 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Mine', columns: [{ title: 'A', subtitle: '', tone: 'green' }] }),
+    })).json<{ id: string }>();
+    const other = await login('g@x.com');
+    const res = await SELF.fetch('http://localhost:8787/api/boards', {
+      method: 'POST',
+      headers: { cookie: other, origin: 'http://localhost:8787', 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'X', template: tpl.id, maxVotes: 5 }),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
 describe('join', () => {
   it('lets a second logged-in user join via the link and then see the board', async () => {
     const owner = await login('o2@x.com');

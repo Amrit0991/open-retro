@@ -5,11 +5,13 @@ import { BoardCard } from './BoardCard';
 import { CreateBoardModal } from './CreateBoardModal';
 import { Glyph } from '../ui/Glyph';
 import { Icon } from '../ui/icons';
+import type { Tone } from '../../shared/protocol';
 
 interface BoardSummary {
   id: string;
   name: string;
-  template: string;
+  templateName: string;
+  glyph: { tone: Tone; icon: string };
 }
 
 export function BoardListPage() {

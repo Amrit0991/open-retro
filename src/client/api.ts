@@ -1,3 +1,5 @@
+import type { TemplateColumnInput } from '../shared/protocol';
+
 const json = (r: Response) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status))));
 const h = { 'content-type': 'application/json' };
 
@@ -14,4 +16,11 @@ export const api = {
   joinBoard: (id: string) =>
     fetch(`/api/boards/${id}/join`, { method: 'POST', headers: h }).then(json),
   logout: () => fetch('/api/auth/logout', { method: 'POST', headers: h }).then(() => {}),
+  listTemplates: () => fetch('/api/templates').then(json),
+  createTemplate: (t: { name: string; columns: TemplateColumnInput[] }) =>
+    fetch('/api/templates', { method: 'POST', headers: h, body: JSON.stringify(t) }).then(json),
+  updateTemplate: (id: string, t: { name: string; columns: TemplateColumnInput[] }) =>
+    fetch(`/api/templates/${id}`, { method: 'PUT', headers: h, body: JSON.stringify(t) }).then(json),
+  deleteTemplate: (id: string) =>
+    fetch(`/api/templates/${id}`, { method: 'DELETE', headers: h }).then(json),
 };

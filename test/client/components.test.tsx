@@ -113,7 +113,11 @@ it('submits email and shows the check-inbox confirmation', async () => {
 
 it('creates a board with chosen template and votes', async () => {
   const onCreate = vi.fn().mockResolvedValue({ id: 'b1' });
-  render(<CreateBoardModal onCreate={onCreate} onClose={() => {}} />);
+  render(
+    <MemoryRouter>
+      <CreateBoardModal onCreate={onCreate} onClose={() => {}} />
+    </MemoryRouter>,
+  );
   await userEvent.type(screen.getByLabelText(/name/i), 'Sprint 13');
   await userEvent.selectOptions(screen.getByLabelText(/template/i), 'sailboat');
   await userEvent.clear(screen.getByLabelText(/max votes/i));
@@ -125,7 +129,11 @@ it('creates a board with chosen template and votes', async () => {
 it('keeps the modal open and shows an error when create rejects', async () => {
   const onCreate = vi.fn().mockRejectedValue(new Error('400'));
   const onClose = vi.fn();
-  const { getByRole } = render(<CreateBoardModal onCreate={onCreate} onClose={onClose} />);
+  const { getByRole } = render(
+    <MemoryRouter>
+      <CreateBoardModal onCreate={onCreate} onClose={onClose} />
+    </MemoryRouter>,
+  );
   const dialog = within(getByRole('dialog'));
   await userEvent.type(dialog.getByLabelText(/name/i), 'Sprint 13');
   await userEvent.click(dialog.getByRole('button', { name: /create/i }));

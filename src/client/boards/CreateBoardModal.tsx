@@ -1,20 +1,66 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { TEMPLATES } from '../../shared/templates';
-import type { TemplateId } from '../../shared/protocol';
+import type { TemplateSummary, Tone } from '../../shared/protocol';
 import { Glyph } from '../ui/Glyph';
+import { api } from '../api';
+
+// A selectable template in the dropdown — a built-in slug or a custom uuid.
+interface TemplateOption {
+  id: string;
+  name: string;
+  glyph: { tone: Tone; icon: string };
+}
+
+// Built-ins render synchronously so the select is usable before any fetch resolves.
+const BUILTIN_OPTIONS: TemplateOption[] = Object.entries(TEMPLATES).map(([id, t]) => ({
+  id,
+  name: `${t.name} · ${t.columns.length} columns`,
+  glyph: t.glyph,
+}));
 
 export function CreateBoardModal({
   onCreate,
   onClose,
 }: {
-  onCreate: (b: { name: string; template: TemplateId; maxVotes: number }) => Promise<{ id: string }>;
+  onCreate: (b: { name: string; template: string; maxVotes: number }) => Promise<{ id: string }>;
   onClose: () => void;
 }) {
   const [name, setName] = useState('');
-  const [template, setTemplate] = useState<TemplateId>('three_little_pigs');
+  const [template, setTemplate] = useState('three_little_pigs');
   const [maxVotes, setMaxVotes] = useState(6);
   const [error, setError] = useState(false);
-  const g = TEMPLATES[template].glyph;
+  const [custom, setCustom] = useState<TemplateOption[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .listTemplates()
+      .then((r) => {
+        if (!active) return;
+        const { custom: summaries = [] } = (r ?? {}) as { custom?: TemplateSummary[] };
+        setCustom(summaries.map((t) => ({ id: t.id, name: t.name, glyph: t.glyph })));
+      })
+      .catch(() => {}); // a rejected/absent fetch leaves the built-ins intact
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Built-ins first, then custom; dedupe by id (built-ins win).
+  const options = useMemo<TemplateOption[]>(() => {
+    const seen = new Set(BUILTIN_OPTIONS.map((o) => o.id));
+    const merged = [...BUILTIN_OPTIONS];
+    for (const o of custom) {
+      if (seen.has(o.id)) continue;
+      seen.add(o.id);
+      merged.push(o);
+    }
+    return merged;
+  }, [custom]);
+
+  const selected = options.find((o) => o.id === template) ?? BUILTIN_OPTIONS[0];
+  const g = selected.glyph;
 
   return (
     <div className="overlay" onClick={onClose}>
@@ -58,15 +104,18 @@ export function CreateBoardModal({
                 id="b-tpl"
                 className="select"
                 value={template}
-                onChange={(e) => setTemplate(e.target.value as TemplateId)}
+                onChange={(e) => setTemplate(e.target.value)}
               >
-                {Object.entries(TEMPLATES).map(([id, t]) => (
-                  <option key={id} value={id}>
-                    {t.name} · {t.columns.length} columns
+                {options.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
                   </option>
                 ))}
               </select>
             </div>
+            <Link to="/templates" className="link-sub">
+              Manage templates
+            </Link>
           </div>
 
           <div className="field">

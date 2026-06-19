@@ -3,6 +3,16 @@
   "main": "src/worker/index.ts",
   "compatibility_date": "2025-04-01",
   "compatibility_flags": ["nodejs_compat"],
+  // Persist Worker logs (visible in the dashboard + `wrangler tail`). enabled = master
+  // switch; logs.invocation_logs = per-request invocation summaries. head_sampling_rate
+  // defaults to 1 (100% of requests). Lower it if log volume/cost becomes a concern.
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

@@ -1,7 +1,7 @@
 # Template Builder — Design Spec
 
 **Date:** 2026-06-18
-**Status:** Awaiting user review
+**Status:** Approved — ready for implementation planning
 **Builds on:** the shipped open-retro app (Vite SPA + Worker + per-board SQLite Durable Object + D1).
 
 Let users create, edit, and delete their own retro **templates** (a named set of columns), instead of being limited to the two hardcoded built-ins. Boards created from a template capture an independent **snapshot** of its columns.
@@ -191,7 +191,7 @@ src/client/App.tsx            # /templates route
 
 ---
 
-## 9. Open decisions (confirm at review)
+## 9. Decisions (confirmed)
 
-1. **Template builder placement** — a dedicated `/templates` page + a builder **modal** (recommended). Alt: builder as its own full page.
-2. **Default custom-column icon** — `layers` (a neutral stack). Fine?
+1. **Template builder placement** — a dedicated `/templates` page + a builder **modal**. ✅
+2. **Default custom-column icon** — `layers`. ✅

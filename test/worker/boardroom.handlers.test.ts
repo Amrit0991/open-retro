@@ -1,6 +1,7 @@
 import { env, runInDurableObject } from 'cloudflare:test';
 import { describe, it, expect } from 'vitest';
 import type { ActionResult, BoardSnapshot } from '../../src/shared/protocol';
+import { TAKEAWAYS_COLUMN_ID } from '../../src/shared/protocol';
 import { TEMPLATES } from '../../src/shared/templates';
 import type { BoardRoom } from '../../src/worker/boardroom/boardroom';
 import {
@@ -155,5 +156,35 @@ describe('move + set_max_votes handlers', () => {
     expect(out.bad.actor?.[0]).toMatchObject({ type: 'error', code: 'forbidden' });
     expect(out.ok.broadcast?.[0]).toMatchObject({ type: 'max_votes_changed', maxVotes: 3 });
     expect(out.meta.maxVotes).toBe(3);
+  });
+});
+
+describe('takeaways', () => {
+  const ACTOR = { userId: 'u1', displayName: 'Ann' };
+
+  it('accepts cards in the built-in takeaways column and moves cards into it', async () => {
+    const stub = freshStub();
+    const out = await runInDurableObject<BoardRoom, { add: ActionResult; snap: BoardSnapshot }>(stub, (i: any) => {
+      i.db.seed(TEMPLATES.sailboat, 6, 'owner');
+      const add = handleAddCard(i.db, ACTOR, { clientCardId: 'c1', columnId: TAKEAWAYS_COLUMN_ID, text: 'ship it' });
+      handleAddCard(i.db, ACTOR, { clientCardId: 'c2', columnId: 'wind', text: 'b' });
+      const b = i.db.snapshot('u1').cards.find((c: any) => c.text === 'b');
+      handleMoveCard(i.db, ACTOR, { cardId: b.id, toColumnId: TAKEAWAYS_COLUMN_ID, beforeId: null, afterId: null });
+      return { add, snap: i.db.snapshot('u1') };
+    });
+    expect(out.add.broadcast?.[0]).toMatchObject({ type: 'card_added' });
+    expect(out.snap.cards.every((c) => c.columnId === TAKEAWAYS_COLUMN_ID)).toBe(true);
+    expect(out.snap.columns.map((c) => c.id)).not.toContain(TAKEAWAYS_COLUMN_ID);
+  });
+
+  it('author can edit their own card', async () => {
+    const stub = freshStub();
+    const res = await runInDurableObject<BoardRoom, ActionResult>(stub, (i: any) => {
+      i.db.seed(TEMPLATES.sailboat, 6, 'owner');
+      handleAddCard(i.db, ACTOR, { clientCardId: 'c1', columnId: 'wind', text: 'old' });
+      const card = i.db.snapshot('u1').cards[0];
+      return handleEditCard(i.db, ACTOR, { cardId: card.id, text: ' new ' });
+    });
+    expect(res.broadcast?.[0]).toMatchObject({ type: 'card_edited', text: 'new' });
   });
 });

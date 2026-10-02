@@ -748,10 +748,20 @@ select {
   color: var(--brand-ink);
 }
 
-.card-del {
+.card-tools {
   position: absolute;
   top: 8px;
   right: 8px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.14s ease;
+}
+.card:hover .card-tools,
+.card-tools:focus-within {
+  opacity: 1;
+}
+.card-tools button {
   width: 26px;
   height: 26px;
   border: none;
@@ -760,17 +770,82 @@ select {
   color: var(--ink-3);
   display: grid;
   place-items: center;
-  opacity: 0;
   box-shadow: var(--shadow-card);
-  transition: opacity 0.14s ease, color 0.14s ease, background 0.14s ease;
+  transition: color 0.14s ease, background 0.14s ease;
 }
-.card:hover .card-del,
-.card-del:focus-visible {
-  opacity: 1;
+.card-tools button:hover {
+  color: var(--ink);
+  background: var(--panel-2);
 }
-.card-del:hover {
+.card-tools button[aria-label='delete']:hover {
   color: #ef5b45;
   background: #fdeae5;
+}
+.card-edit {
+  display: block;
+  width: 100%;
+  min-height: 64px;
+  margin: 0 0 9px;
+  padding: 8px 10px;
+  border: 1px solid rgba(31, 157, 99, 0.5);
+  border-radius: var(--r-sm);
+  box-shadow: var(--ring);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.author .avatar[data-tone='green'] { background: #1f9d63; }
+.author .avatar[data-tone='blue'] { background: #3b7df0; }
+.author .avatar[data-tone='coral'] { background: #ef5b45; }
+.author .avatar[data-tone='purple'] { background: #8257e6; }
+.author .avatar[data-tone='amber'] { background: #cf8a25; }
+.author .avatar[data-tone='pink'] { background: #e0589b; }
+.author .avatar[data-tone='slate'] { background: #5b6675; }
+
+.votes-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(31, 157, 99, 0.35);
+  border-radius: var(--r-pill);
+  background: var(--brand-soft);
+  color: var(--ink-2);
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+.votes-left .n {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--brand);
+  font-variant-numeric: tabular-nums;
+}
+.votes-left.empty {
+  border-color: var(--line-2);
+  background: var(--panel-2);
+}
+.votes-left.empty .n {
+  color: var(--ink-3);
+}
+
+.takeaways {
+  padding: 0 24px 32px;
+}
+.column-wide .col-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 9px;
+}
+.column-wide .col-cards .card {
+  margin-bottom: 0;
+}
+.column-wide .add-card {
+  max-width: 560px;
 }
 
 /* --------------------------------------------------------------- Login --- */

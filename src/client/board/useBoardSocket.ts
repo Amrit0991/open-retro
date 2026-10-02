@@ -78,7 +78,10 @@ export function useBoardSocket(boardId: string, opts?: BoardSocketOptions) {
       });
       send({ type: 'add_card', clientCardId, columnId, text });
     },
-    editCard: (cardId: string, text: string) => send({ type: 'edit_card', cardId, text }),
+    editCard(cardId: string, text: string) {
+      dispatch({ kind: 'server', msg: { type: 'card_edited', cardId, text } });
+      send({ type: 'edit_card', cardId, text });
+    },
     deleteCard: (cardId: string) => send({ type: 'delete_card', cardId }),
     moveCard: (cardId: string, toColumnId: string, beforeId: string | null, afterId: string | null) =>
       send({ type: 'move_card', cardId, toColumnId, beforeId, afterId }),

@@ -20,6 +20,17 @@ import { SortToggle, useSortByVotes, sortedOrder } from './SortToggle';
 import { MaxVotesSetting } from './MaxVotesSetting';
 import { Glyph } from '../ui/Glyph';
 import { Icon } from '../ui/icons';
+import { VotesLeft } from './VotesLeft';
+import { remainingVotes } from './reducer';
+import { TAKEAWAYS_COLUMN_ID, type ColumnDef } from '../../shared/protocol';
+
+const TAKEAWAYS: ColumnDef = {
+  id: TAKEAWAYS_COLUMN_ID,
+  title: 'Takeaways',
+  subtitle: 'What we will do differently next time',
+  tone: 'green',
+  icon: 'flag',
+};
 
 export function BoardView() {
   const { id } = useParams<{ id: string }>();
@@ -75,18 +86,30 @@ export function BoardView() {
   };
 
   const columns = (
-    <div className="columns">
-      {state.columns.map((col) => (
+    <>
+      <div className="columns">
+        {state.columns.map((col) => (
+          <Column
+            key={col.id}
+            col={col}
+            state={state}
+            myUserId={myUserId}
+            actions={actions}
+            ids={view[col.id]}
+          />
+        ))}
+      </div>
+      <div className="takeaways">
         <Column
-          key={col.id}
-          col={col}
+          col={TAKEAWAYS}
           state={state}
           myUserId={myUserId}
           actions={actions}
-          ids={view[col.id]}
+          ids={view[TAKEAWAYS_COLUMN_ID]}
+          wide
         />
-      ))}
-    </div>
+      </div>
+    </>
   );
 
   return (
@@ -103,6 +126,7 @@ export function BoardView() {
           </div>
         </div>
         <div className="spacer" />
+        <VotesLeft remaining={remainingVotes(state)} max={state.maxVotes} />
         <SortToggle on={sortOn} toggle={toggleSort} />
         <ShareButton boardId={id ?? ''} />
         {isOwner && <MaxVotesSetting value={state.maxVotes} onChange={actions.setMaxVotes} />}

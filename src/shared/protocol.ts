@@ -61,3 +61,6 @@ export const LIMITS = {
 } as const;
 
 export const DEFAULT_COLUMN_ICON = 'layers';
+
+// Every board has a takeaways section; its id is reserved and never stored in `columns`.
+export const TAKEAWAYS_COLUMN_ID = 'takeaways';

@@ -1,4 +1,5 @@
 import type { BoardSnapshot, Card, ColumnDef, TemplateSnapshot } from '../../shared/protocol';
+import { TAKEAWAYS_COLUMN_ID } from '../../shared/protocol';
 
 // Wraps a Durable Object's embedded SQLite (`ctx.storage.sql`). All methods are
 // synchronous — the SQLite storage backend exposes a synchronous `SqlStorage`.
@@ -211,6 +212,7 @@ export class BoardDb {
   }
 
   columnExists(columnId: string): boolean {
+    if (columnId === TAKEAWAYS_COLUMN_ID) return true;
     return !!this.sql.exec('SELECT 1 FROM columns WHERE id=?', columnId).toArray()[0];
   }
 

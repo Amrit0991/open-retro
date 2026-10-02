@@ -114,6 +114,21 @@ bunx playwright install chromium
 
 ## Deployment
 
+### Zest production
+
+The Zest instance is hosted at https://retro.zestapp.co in the
+`Jake@zestapp.co` Cloudflare account. Its configuration is in `env.production`
+in `wrangler.jsonc`; the default configuration remains for local development.
+
+```bash
+bun run deploy:production
+```
+
+This builds the frontend, applies the idempotent schema, and deploys the Worker.
+The existing production database received the `template_snapshot` migration on
+2026-09-11. Login emails use `login@retro.zestapp.co`; Cloudflare Email Sending
+and its DNS records were enabled for this subdomain on the same date.
+
 The Worker, the `BoardRoom` Durable Object, and the D1 database are all declared in `wrangler.jsonc`,
 so they're provisioned together. The app needs the **Workers Paid** plan (SQLite Durable Objects +
 sending email to arbitrary recipients).

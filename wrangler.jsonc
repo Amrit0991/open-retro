@@ -31,15 +31,33 @@
     {
       "binding": "DB",
       "database_name": "open-retro",
-      // PLACEHOLDER: before any REMOTE deploy, run `bunx wrangler d1 create open-retro`
-      // and replace this id with the real one it prints.
-      // Local dev (`wrangler dev`) and @cloudflare/vitest-pool-workers use a local
-      // Miniflare D1 and do NOT need a real database_id.
       "database_id": "local-dev-placeholder"
     }
   ],
   // DOMAIN = your onboarded Cloudflare sending domain (the magic-link "from" address).
   // Local dev uses AUTH_TEST_MODE so no real email is sent; set the real domain for deploy.
   "vars": { "APP_ORIGIN": "http://localhost:8787", "DOMAIN": "localhost" },
+  "env": {
+    "production": {
+      "name": "open-retro",
+      "account_id": "8d5ea2c0fd5b55ce0ebee0a2a0d090cc",
+      "workers_dev": false,
+      "routes": [{ "pattern": "retro.zestapp.co", "custom_domain": true }],
+      "vars": {
+        "APP_ORIGIN": "https://retro.zestapp.co",
+        "DOMAIN": "retro.zestapp.co"
+      },
+      // Bindings are not inherited by named environments.
+      "durable_objects": {
+        "bindings": [{ "name": "BOARDROOM", "class_name": "BoardRoom" }]
+      },
+      "send_email": [{ "name": "EMAIL" }],
+      "d1_databases": [{
+        "binding": "DB",
+        "database_name": "open-retro",
+        "database_id": "5d7c9105-4b11-4d4d-af1a-f4907e4cff14"
+      }]
+    }
+  },
   "triggers": { "crons": ["0 * * * *"] }
 }

@@ -25,8 +25,14 @@ authRoutes.post('/request', async (c) => {
     const url = `${c.env.APP_ORIGIN}/api/auth/verify?token=${encodeURIComponent(raw)}`;
     try {
       await sendMagicLink(c.env, email, url);
-    } catch {
-      /* do not leak */
+    } catch (error) {
+      // Keep the public response uniform, but expose provider failures to operators.
+      // Never log login URLs, tokens, or recipient addresses.
+      const detail = error instanceof Error ? error.message : 'Unknown email error';
+      console.error('Magic-link email send failed', {
+        code: String((error as { code?: unknown } | null)?.code ?? 'unknown'),
+        message: detail.replace(/https?:\/\/\S+/g, '[url]').replace(/[^\s@]+@[^\s@]+/g, '[email]').slice(0, 300),
+      });
     }
     if (c.env.AUTH_TEST_MODE === '1') return c.json({ ok: true, devUrl: url });
   }

@@ -4,7 +4,9 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { LoginPage } from '../../src/client/auth/LoginPage';
 import { CreateBoardModal } from '../../src/client/boards/CreateBoardModal';
+import { TemplateBuilder } from '../../src/client/templates/TemplateBuilder';
 import { BoardListPage } from '../../src/client/boards/BoardList';
+import { TemplatesPage } from '../../src/client/templates/TemplatesPage';
 import { api } from '../../src/client/api';
 import { computeNeighbors, resolveMove } from '../../src/client/board/dnd';
 import { sortedOrder } from '../../src/client/board/SortToggle';
@@ -110,8 +112,13 @@ it('submits email and shows the check-inbox confirmation', async () => {
 });
 
 it('creates a board with chosen template and votes', async () => {
+  vi.spyOn(api, 'listTemplates').mockResolvedValue({ builtins: [], custom: [] } as any);
   const onCreate = vi.fn().mockResolvedValue({ id: 'b1' });
-  render(<CreateBoardModal onCreate={onCreate} onClose={() => {}} />);
+  render(
+    <MemoryRouter>
+      <CreateBoardModal onCreate={onCreate} onClose={() => {}} />
+    </MemoryRouter>,
+  );
   await userEvent.type(screen.getByLabelText(/name/i), 'Sprint 13');
   await userEvent.selectOptions(screen.getByLabelText(/template/i), 'sailboat');
   await userEvent.clear(screen.getByLabelText(/max votes/i));
@@ -121,15 +128,32 @@ it('creates a board with chosen template and votes', async () => {
 });
 
 it('keeps the modal open and shows an error when create rejects', async () => {
+  vi.spyOn(api, 'listTemplates').mockResolvedValue({ builtins: [], custom: [] } as any);
   const onCreate = vi.fn().mockRejectedValue(new Error('400'));
   const onClose = vi.fn();
-  const { getByRole } = render(<CreateBoardModal onCreate={onCreate} onClose={onClose} />);
+  const { getByRole } = render(
+    <MemoryRouter>
+      <CreateBoardModal onCreate={onCreate} onClose={onClose} />
+    </MemoryRouter>,
+  );
   const dialog = within(getByRole('dialog'));
   await userEvent.type(dialog.getByLabelText(/name/i), 'Sprint 13');
   await userEvent.click(dialog.getByRole('button', { name: /create/i }));
   expect(await dialog.findByText(/couldn't create/i)).toBeInTheDocument();
   expect(onClose).not.toHaveBeenCalled(); // modal stays open
   expect(dialog.getByRole('button', { name: /create/i })).toBeInTheDocument();
+});
+
+it('builds a template and calls onSave with name + columns', async () => {
+  const onSave = vi.fn().mockResolvedValue(undefined);
+  render(<TemplateBuilder onSave={onSave} onClose={() => {}} />);
+  await userEvent.type(screen.getByLabelText(/template name/i), 'Quick Retro');
+  await userEvent.type(screen.getAllByLabelText(/column title/i)[0], 'Keep');
+  await userEvent.click(screen.getByRole('button', { name: /add column/i }));
+  await userEvent.type(screen.getAllByLabelText(/column title/i)[1], 'Drop');
+  await userEvent.click(screen.getByRole('button', { name: /save template/i }));
+  expect(onSave).toHaveBeenCalledWith({ name: 'Quick Retro', columns: [
+    { title: 'Keep', subtitle: '', tone: 'slate' }, { title: 'Drop', subtitle: '', tone: 'slate' }] });
 });
 
 it('shows an error message when the board list fails to load', async () => {
@@ -141,4 +165,17 @@ it('shows an error message when the board list fails to load', async () => {
   );
   expect(await screen.findByText(/couldn't load your boards/i)).toBeInTheDocument();
   spy.mockRestore();
+});
+
+it('lists built-ins and custom templates and deletes a custom one', async () => {
+  vi.spyOn(api, 'listTemplates').mockResolvedValue({
+    builtins: [{ id: 'sailboat', name: 'Sailboat', glyph: { tone: 'blue', icon: 'sail' }, columns: [], readOnly: true }],
+    custom: [{ id: 'c1', name: 'Mine', glyph: { tone: 'green', icon: 'layers' }, columns: [], readOnly: false }],
+  } as any);
+  const del = vi.spyOn(api, 'deleteTemplate').mockResolvedValue({ ok: true } as any);
+  render(<MemoryRouter><TemplatesPage /></MemoryRouter>);
+  expect(await screen.findByText('Sailboat')).toBeInTheDocument();
+  expect(screen.getByText('Mine')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: /delete mine/i }));
+  expect(del).toHaveBeenCalledWith('c1');
 });

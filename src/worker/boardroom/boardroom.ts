@@ -7,7 +7,7 @@ import type {
   ServerMessage,
   Identity,
   ActionResult,
-  TemplateId,
+  TemplateSnapshot,
 } from '../../shared/protocol';
 
 interface Attachment {
@@ -31,8 +31,9 @@ export class BoardRoom extends DurableObject<Env> {
     const displayName = request.headers.get('x-display-name') || 'Someone';
 
     // Seed synchronously on first connect from Worker-provided metadata (no D1 read here).
+    const snapshot = JSON.parse(request.headers.get('x-template-json')!) as TemplateSnapshot;
     this.db.seed(
-      request.headers.get('x-template') as TemplateId,
+      snapshot,
       Number(request.headers.get('x-max-votes')),
       request.headers.get('x-owner-id')!,
     );

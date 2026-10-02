@@ -18,6 +18,8 @@ export type IconName =
   | 'send'
   | 'mail'
   | 'trash'
+  | 'pencil'
+  | 'flag'
   | 'check'
   | 'back'
   | 'sparkle';
@@ -122,6 +124,17 @@ const PATHS: Record<IconName, ReactNode> = {
       <line x1="14" x2="14" y1="11" y2="17" />
     </>
   ),
+  pencil: (
+    <>
+      <path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z" />
+      <path d="m15 5 4 4" />
+    </>
+  ),
+  flag: (
+    <>
+      <path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.33 2q2 0 3.67-.8a1 1 0 0 1 1 .8v11a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.53" />
+    </>
+  ),
   check: (
     <>
       <path d="M21.8 10A10 10 0 1 1 16 3.3" />
@@ -134,7 +147,9 @@ const PATHS: Record<IconName, ReactNode> = {
   ),
 };
 
-export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
+export function Icon({ name, size = 18 }: { name: string; size?: number }) {
+  // Tolerate unknown icon names (e.g. custom-template glyphs) by falling back to `layers`.
+  const node = (PATHS as Record<string, ReactNode>)[name] ?? PATHS.layers;
   return (
     <svg
       width={size}
@@ -147,7 +162,7 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      {PATHS[name]}
+      {node}
     </svg>
   );
 }

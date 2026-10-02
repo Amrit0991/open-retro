@@ -1,7 +1,8 @@
 import type { CSSProperties } from 'react';
-import { Icon, type IconName } from './icons';
+import { Icon } from './icons';
+import type { Tone } from '../../shared/protocol';
 
-export type Tone = 'green' | 'blue' | 'coral' | 'purple' | 'amber' | 'pink' | 'slate';
+export type { Tone };
 
 // The signature colored-glyph chip: a soft-tinted rounded square + an accent icon.
 // `tone` sets both background tint and icon color (see .glyph rules in styles.css).
@@ -11,7 +12,7 @@ export function Glyph({
   size = 34,
 }: {
   tone: Tone;
-  icon: IconName;
+  icon: string;
   size?: number;
 }) {
   return (

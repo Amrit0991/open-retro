@@ -1,18 +1,42 @@
 import type { Env } from '../types';
-import type { TemplateId } from '../../shared/protocol';
+import type { TemplateSnapshot } from '../../shared/protocol';
+import { TEMPLATES } from '../../shared/templates';
 
-export interface BoardRow { id: string; name: string; owner_id: string; template: TemplateId; max_votes: number; created_at: number; }
+export interface BoardRow {
+  id: string;
+  name: string;
+  owner_id: string;
+  template: string;
+  max_votes: number;
+  created_at: number;
+  template_snapshot: string | null;
+}
 
-export async function createBoard(env: Env, ownerId: string, name: string, template: TemplateId, maxVotes: number): Promise<BoardRow> {
+export async function createBoard(
+  env: Env,
+  ownerId: string,
+  name: string,
+  templateRef: string,
+  snapshot: TemplateSnapshot,
+  maxVotes: number,
+): Promise<BoardRow> {
   const id = crypto.randomUUID();
   const now = Date.now();
+  const snapJson = JSON.stringify(snapshot);
   await env.DB.batch([
-    env.DB.prepare('INSERT INTO boards (id,name,owner_id,template,max_votes,created_at) VALUES (?,?,?,?,?,?)')
-      .bind(id, name, ownerId, template, maxVotes, now),
+    env.DB.prepare('INSERT INTO boards (id,name,owner_id,template,max_votes,created_at,template_snapshot) VALUES (?,?,?,?,?,?,?)')
+      .bind(id, name, ownerId, templateRef, maxVotes, now, snapJson),
     env.DB.prepare('INSERT INTO board_members (board_id,user_id,role,joined_at) VALUES (?,?,?,?)')
       .bind(id, ownerId, 'owner', now),
   ]);
-  return { id, name, owner_id: ownerId, template, max_votes: maxVotes, created_at: now };
+  return { id, name, owner_id: ownerId, template: templateRef, max_votes: maxVotes, created_at: now, template_snapshot: snapJson };
+}
+
+// Resolve a board's column/glyph snapshot. New boards store it inline; older
+// boards (no snapshot) fall back to the built-in template by `board.template`.
+export function boardSnapshot(board: BoardRow): TemplateSnapshot | null {
+  if (board.template_snapshot) return JSON.parse(board.template_snapshot) as TemplateSnapshot;
+  return (TEMPLATES as Record<string, TemplateSnapshot>)[board.template] ?? null;
 }
 
 export async function listBoardsForUser(env: Env, userId: string) {

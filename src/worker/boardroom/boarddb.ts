@@ -1,5 +1,5 @@
-import { TEMPLATES } from '../../shared/templates';
-import type { BoardSnapshot, Card, ColumnDef, TemplateId } from '../../shared/protocol';
+import type { BoardSnapshot, Card, ColumnDef, TemplateSnapshot } from '../../shared/protocol';
+import { TAKEAWAYS_COLUMN_ID } from '../../shared/protocol';
 
 // Wraps a Durable Object's embedded SQLite (`ctx.storage.sql`). All methods are
 // synchronous — the SQLite storage backend exposes a synchronous `SqlStorage`.
@@ -12,10 +12,10 @@ export class BoardDb {
   // One statement per `exec` call — the runtime rejects multi-statement strings.
   private init(): void {
     this.sql.exec(
-      'CREATE TABLE IF NOT EXISTS meta (id INTEGER PRIMARY KEY CHECK (id=1), template TEXT, max_votes INTEGER, owner_id TEXT, seeded INTEGER DEFAULT 0)',
+      'CREATE TABLE IF NOT EXISTS meta (id INTEGER PRIMARY KEY CHECK (id=1), template_name TEXT, max_votes INTEGER, owner_id TEXT, glyph_tone TEXT, glyph_icon TEXT, seeded INTEGER DEFAULT 0)',
     );
     this.sql.exec(
-      'CREATE TABLE IF NOT EXISTS columns (id TEXT PRIMARY KEY, title TEXT, subtitle TEXT, position INTEGER)',
+      'CREATE TABLE IF NOT EXISTS columns (id TEXT PRIMARY KEY, title TEXT, subtitle TEXT, position INTEGER, tone TEXT, icon TEXT)',
     );
     this.sql.exec(
       'CREATE TABLE IF NOT EXISTS cards (id TEXT PRIMARY KEY, column_id TEXT, text TEXT, author_id TEXT, author_name TEXT, position REAL, created_at INTEGER)',
@@ -26,35 +26,48 @@ export class BoardDb {
   }
 
   // Idempotent: a `seeded` flag guards against double-inserting columns.
-  seed(template: TemplateId, maxVotes: number, ownerId: string): void {
+  seed(snapshot: TemplateSnapshot, maxVotes: number, ownerId: string): void {
     const row = this.sql.exec('SELECT seeded FROM meta WHERE id=1').toArray()[0] as
       | { seeded: number }
       | undefined;
     if (row?.seeded === 1) return;
     this.sql.exec(
-      'INSERT OR REPLACE INTO meta (id,template,max_votes,owner_id,seeded) VALUES (1,?,?,?,1)',
-      template,
+      'INSERT OR REPLACE INTO meta (id,template_name,max_votes,owner_id,glyph_tone,glyph_icon,seeded) VALUES (1,?,?,?,?,?,1)',
+      snapshot.name,
       maxVotes,
       ownerId,
+      snapshot.glyph.tone,
+      snapshot.glyph.icon,
     );
-    TEMPLATES[template].columns.forEach((col: ColumnDef, i: number) => {
+    snapshot.columns.forEach((col: ColumnDef, i: number) => {
       this.sql.exec(
-        'INSERT OR IGNORE INTO columns (id,title,subtitle,position) VALUES (?,?,?,?)',
+        'INSERT OR IGNORE INTO columns (id,title,subtitle,position,tone,icon) VALUES (?,?,?,?,?,?)',
         col.id,
         col.title,
         col.subtitle,
         i,
+        col.tone,
+        col.icon,
       );
     });
   }
 
-  getMeta(): { template: TemplateId; maxVotes: number; ownerId: string } {
-    const m = this.sql.exec('SELECT template,max_votes,owner_id FROM meta WHERE id=1').one() as {
-      template: string;
+  getMeta(): { templateName: string; maxVotes: number; ownerId: string; glyph: { tone: string; icon: string } } {
+    const m = this.sql
+      .exec('SELECT template_name,max_votes,owner_id,glyph_tone,glyph_icon FROM meta WHERE id=1')
+      .one() as {
+      template_name: string;
       max_votes: number;
       owner_id: string;
+      glyph_tone: string;
+      glyph_icon: string;
     };
-    return { template: m.template as TemplateId, maxVotes: Number(m.max_votes), ownerId: m.owner_id };
+    return {
+      templateName: m.template_name,
+      maxVotes: Number(m.max_votes),
+      ownerId: m.owner_id,
+      glyph: { tone: m.glyph_tone, icon: m.glyph_icon },
+    };
   }
 
   setMaxVotes(n: number): void {
@@ -62,10 +75,20 @@ export class BoardDb {
   }
 
   snapshot(userId: string): BoardSnapshot {
-    const meta = this.getMeta();
-    const columns = this.sql
-      .exec('SELECT id,title,subtitle FROM columns ORDER BY position')
-      .toArray() as unknown as ColumnDef[];
+    const m = this.getMeta();
+    const columns = (
+      this.sql
+        .exec('SELECT id,title,subtitle,tone,icon FROM columns ORDER BY position')
+        .toArray() as Array<{ id: string; title: string; subtitle: string; tone: string; icon: string }>
+    ).map(
+      (r): ColumnDef => ({
+        id: r.id,
+        title: r.title,
+        subtitle: r.subtitle,
+        tone: r.tone as ColumnDef['tone'],
+        icon: r.icon,
+      }),
+    );
     const cards = (
       this.sql
         .exec(
@@ -101,7 +124,17 @@ export class BoardDb {
       .toArray() as Array<{ card_id: string; count: number }>) {
       yourVotes[r.card_id] = Number(r.count);
     }
-    return { meta, columns, cards, yourVotes };
+    return {
+      meta: {
+        templateName: m.templateName,
+        maxVotes: m.maxVotes,
+        ownerId: m.ownerId,
+        glyph: { tone: m.glyph.tone as ColumnDef['tone'], icon: m.glyph.icon },
+      },
+      columns,
+      cards,
+      yourVotes,
+    };
   }
 
   // Inserts a card at the end of its column. position = MAX(position)+1024 keeps
@@ -179,6 +212,7 @@ export class BoardDb {
   }
 
   columnExists(columnId: string): boolean {
+    if (columnId === TAKEAWAYS_COLUMN_ID) return true;
     return !!this.sql.exec('SELECT 1 FROM columns WHERE id=?', columnId).toArray()[0];
   }
 

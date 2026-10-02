@@ -2,7 +2,7 @@ import type { Context } from 'hono';
 import { getCookie } from 'hono/cookie';
 import type { Env } from './types';
 import { userIdForSession } from './auth/sessions';
-import { getBoard, isMember } from './boards/repo';
+import { getBoard, isMember, boardSnapshot } from './boards/repo';
 
 // Authenticated WS upgrade: validate session + origin + existing membership, then
 // forward the upgrade into the board's Durable Object with identity/meta headers.
@@ -26,6 +26,17 @@ export async function handleWsUpgrade(c: Context<{ Bindings: Env }>): Promise<Re
     .bind(userId)
     .first<{ display_name: string }>();
 
+  // Resolve the board's column/glyph snapshot from the typed stored field
+  // (boards created before the template-builder feature fall back to a built-in).
+  // A legacy/corrupted ref (no stored snapshot + non-built-in template) yields
+  // null — fall back to a column-less placeholder so the board still LOADS,
+  // mirroring the REST path's guard rather than seeding `null` and crashing.
+  const snapshot = boardSnapshot(board) ?? {
+    name: board.template,
+    glyph: { tone: 'slate' as const, icon: 'layers' },
+    columns: [],
+  };
+
   const stub = c.env.BOARDROOM.get(c.env.BOARDROOM.idFromName(boardId));
   const fwd = new Request(c.req.url, {
     headers: {
@@ -33,7 +44,7 @@ export async function handleWsUpgrade(c: Context<{ Bindings: Env }>): Promise<Re
       'x-user-id': userId,
       'x-display-name': user?.display_name ?? 'Someone',
       'x-board-id': boardId,
-      'x-template': board.template,
+      'x-template-json': JSON.stringify(snapshot),
       'x-max-votes': String(board.max_votes),
       'x-owner-id': board.owner_id,
     },

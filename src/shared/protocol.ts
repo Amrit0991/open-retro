@@ -1,6 +1,10 @@
 export type TemplateId = 'three_little_pigs' | 'sailboat';
 
-export interface ColumnDef { id: string; title: string; subtitle: string; }
+export type Tone = 'green' | 'blue' | 'coral' | 'purple' | 'amber' | 'pink' | 'slate';
+
+export interface ColumnDef { id: string; title: string; subtitle: string; tone: Tone; icon: string; }
+
+export interface TemplateSnapshot { name: string; glyph: { tone: Tone; icon: string }; columns: ColumnDef[]; }
 
 export interface Card {
   id: string;          // client-generated UUID
@@ -14,11 +18,16 @@ export interface Card {
 }
 
 export interface BoardSnapshot {
-  meta: { template: TemplateId; maxVotes: number; ownerId: string };
+  meta: { templateName: string; maxVotes: number; ownerId: string; glyph: { tone: Tone; icon: string } };
   columns: ColumnDef[];
   cards: Card[];
   yourVotes: Record<string, number>;  // cardId -> the requesting user's own count
 }
+
+// builder/API input for one column (id + icon assigned server-side)
+export interface TemplateColumnInput { title: string; subtitle: string; tone: Tone; }
+// a template as returned by GET /api/templates
+export interface TemplateSummary { id: string; name: string; glyph: { tone: Tone; icon: string }; columns: ColumnDef[]; readOnly: boolean; }
 
 export type ClientMessage =
   | { type: 'add_card'; clientCardId: string; columnId: string; text: string }
@@ -46,4 +55,12 @@ export interface ActionResult { actor?: ServerMessage[]; broadcast?: ServerMessa
 
 export interface Identity { userId: string; displayName: string; }
 
-export const LIMITS = { cardText: 2000, boardName: 120, maxVotesMax: 99, boardsPerUser: 100 } as const;
+export const LIMITS = {
+  cardText: 2000, boardName: 120, maxVotesMax: 99, boardsPerUser: 100,
+  templateName: 60, columnTitle: 60, columnSubtitle: 120, templateColumnsMax: 6,
+} as const;
+
+export const DEFAULT_COLUMN_ICON = 'layers';
+
+// Every board has a takeaways section; its id is reserved and never stored in `columns`.
+export const TAKEAWAYS_COLUMN_ID = 'takeaways';

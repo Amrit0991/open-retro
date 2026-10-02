@@ -1,8 +1,9 @@
-import type { ServerMessage, Card, BoardSnapshot, ColumnDef, TemplateId } from '../../shared/protocol';
+import type { ServerMessage, Card, BoardSnapshot, ColumnDef, Tone } from '../../shared/protocol';
 
 export interface BoardState {
   ready: boolean;
-  template: TemplateId | null;
+  templateName: string;
+  glyph: { tone: Tone; icon: string };
   maxVotes: number;
   ownerId: string;
   columns: ColumnDef[];
@@ -12,7 +13,7 @@ export interface BoardState {
 }
 
 export const initialState: BoardState = {
-  ready: false, template: null, maxVotes: 0, ownerId: '', columns: [], cards: {}, order: {}, yourVotes: {},
+  ready: false, templateName: '', glyph: { tone: 'slate', icon: 'layers' }, maxVotes: 0, ownerId: '', columns: [], cards: {}, order: {}, yourVotes: {},
 };
 
 type Action =
@@ -37,7 +38,8 @@ function fromSnapshot(s: BoardSnapshot): BoardState {
   for (const c of s.cards) cards[c.id] = c;
   return {
     ready: true,
-    template: s.meta.template,
+    templateName: s.meta.templateName,
+    glyph: s.meta.glyph,
     maxVotes: s.meta.maxVotes,
     ownerId: s.meta.ownerId,
     columns: s.columns,

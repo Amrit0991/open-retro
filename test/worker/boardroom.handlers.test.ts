@@ -1,6 +1,8 @@
 import { env, runInDurableObject } from 'cloudflare:test';
 import { describe, it, expect } from 'vitest';
 import type { ActionResult, BoardSnapshot } from '../../src/shared/protocol';
+import { TAKEAWAYS_COLUMN_ID } from '../../src/shared/protocol';
+import { TEMPLATES } from '../../src/shared/templates';
 import type { BoardRoom } from '../../src/worker/boardroom/boardroom';
 import {
   handleAddCard,
@@ -24,12 +26,16 @@ describe('BoardDb seed + snapshot', () => {
   it('seeds template columns idempotently and returns meta', async () => {
     const stub = freshStub();
     const snap = await runInDurableObject<BoardRoom, BoardSnapshot>(stub, (instance) => {
-      instance.db.seed('sailboat', 6, 'owner-1');
-      instance.db.seed('sailboat', 6, 'owner-1'); // second call must not double-seed
+      instance.db.seed(TEMPLATES.sailboat, 6, 'owner-1');
+      instance.db.seed(TEMPLATES.sailboat, 6, 'owner-1'); // second call must not double-seed
       return instance.db.snapshot('owner-1');
     });
-    expect(snap.meta).toEqual({ template: 'sailboat', maxVotes: 6, ownerId: 'owner-1' });
+    expect(snap.meta.templateName).toBe('Sailboat');
+    expect(snap.meta.maxVotes).toBe(6);
+    expect(snap.meta.ownerId).toBe('owner-1');
+    expect(snap.meta.glyph).toEqual({ tone: 'blue', icon: 'sail' });
     expect(snap.columns.map((c: any) => c.id)).toEqual(['wind', 'anchors', 'rocks', 'island']);
+    expect(snap.columns[1].tone).toBe('slate');
     expect(snap.cards).toEqual([]);
     expect(snap.yourVotes).toEqual({});
   });
@@ -41,7 +47,7 @@ describe('card handlers (add/edit/delete)', () => {
   it('add_card inserts and echoes clientCardId', async () => {
     const stub = freshStub();
     const res = await runInDurableObject<BoardRoom, ActionResult>(stub, (i) => {
-      i.db.seed('three_little_pigs', 3, 'u1');
+      i.db.seed(TEMPLATES.three_little_pigs, 3, 'u1');
       return handleAddCard(i.db, ACTOR, { clientCardId: 'cc1', columnId: 'straws', text: 'flaky tests' });
     });
     expect(res.broadcast?.[0]).toMatchObject({ type: 'card_added', clientCardId: 'cc1' });
@@ -57,7 +63,7 @@ describe('card handlers (add/edit/delete)', () => {
   it('edit_card by non-author is rejected', async () => {
     const stub = freshStub();
     const res = await runInDurableObject<BoardRoom, ActionResult>(stub, (i) => {
-      i.db.seed('three_little_pigs', 3, 'owner');
+      i.db.seed(TEMPLATES.three_little_pigs, 3, 'owner');
       handleAddCard(i.db, ACTOR, { clientCardId: 'cc1', columnId: 'straws', text: 'x' });
       const card = i.db.snapshot('u1').cards[0];
       return handleEditCard(i.db, { userId: 'intruder', displayName: 'I' }, { cardId: card.id, text: 'hacked' });
@@ -68,7 +74,7 @@ describe('card handlers (add/edit/delete)', () => {
   it('owner can delete another user card and votes are gone', async () => {
     const stub = freshStub();
     const res = await runInDurableObject<BoardRoom, { del: ActionResult; remaining: number }>(stub, (i) => {
-      i.db.seed('three_little_pigs', 3, 'owner');
+      i.db.seed(TEMPLATES.three_little_pigs, 3, 'owner');
       handleAddCard(i.db, ACTOR, { clientCardId: 'cc1', columnId: 'straws', text: 'x' });
       const card = i.db.snapshot('u1').cards[0];
       const del = handleDeleteCard(i.db, { userId: 'owner', displayName: 'O' }, { cardId: card.id });
@@ -88,7 +94,7 @@ describe('vote handlers (atomic budget)', () => {
       BoardRoom,
       { r1: ActionResult; r2: ActionResult; r3: ActionResult; total: number; mine: number }
     >(stub, (i) => {
-      i.db.seed('three_little_pigs', 2, 'owner'); // budget = 2
+      i.db.seed(TEMPLATES.three_little_pigs, 2, 'owner'); // budget = 2
       handleAddCard(i.db, ACTOR, { clientCardId: 'c1', columnId: 'straws', text: 'a' });
       handleAddCard(i.db, ACTOR, { clientCardId: 'c2', columnId: 'straws', text: 'b' });
       const [a, b] = i.db.snapshot('u1').cards;
@@ -107,7 +113,7 @@ describe('vote handlers (atomic budget)', () => {
   it('unvote frees budget and works regardless of cap', async () => {
     const stub = freshStub();
     const out = await runInDurableObject<BoardRoom, { before: number; after: number }>(stub, (i) => {
-      i.db.seed('three_little_pigs', 1, 'owner');
+      i.db.seed(TEMPLATES.three_little_pigs, 1, 'owner');
       handleAddCard(i.db, ACTOR, { clientCardId: 'c1', columnId: 'straws', text: 'a' });
       const a = i.db.snapshot('u1').cards[0];
       handleVote(i.db, ACTOR, { cardId: a.id });
@@ -126,7 +132,7 @@ describe('move + set_max_votes handlers', () => {
   it('moves a card to another column at the right position', async () => {
     const stub = freshStub();
     const out = await runInDurableObject<BoardRoom, { moved: ActionResult; snap: BoardSnapshot }>(stub, (i: any) => {
-      i.db.seed('sailboat', 6, 'owner');
+      i.db.seed(TEMPLATES.sailboat, 6, 'owner');
       handleAddCard(i.db, ACTOR, { clientCardId: 'c1', columnId: 'wind', text: 'a' });
       const a = i.db.snapshot('u1').cards[0];
       const moved = handleMoveCard(i.db, ACTOR, { cardId: a.id, toColumnId: 'anchors', beforeId: null, afterId: null });
@@ -140,9 +146,9 @@ describe('move + set_max_votes handlers', () => {
     const stub = freshStub();
     const out = await runInDurableObject<
       BoardRoom,
-      { bad: ActionResult; ok: ActionResult; meta: { template: string; maxVotes: number; ownerId: string } }
+      { bad: ActionResult; ok: ActionResult; meta: { templateName: string; maxVotes: number; ownerId: string; glyph: { tone: string; icon: string } } }
     >(stub, (i: any) => {
-      i.db.seed('sailboat', 6, 'owner');
+      i.db.seed(TEMPLATES.sailboat, 6, 'owner');
       const bad = handleSetMaxVotes(i.db, { userId: 'u1', displayName: 'A' }, { n: 3 });
       const ok = handleSetMaxVotes(i.db, { userId: 'owner', displayName: 'O' }, { n: 3 });
       return { bad, ok, meta: i.db.getMeta() };
@@ -150,5 +156,35 @@ describe('move + set_max_votes handlers', () => {
     expect(out.bad.actor?.[0]).toMatchObject({ type: 'error', code: 'forbidden' });
     expect(out.ok.broadcast?.[0]).toMatchObject({ type: 'max_votes_changed', maxVotes: 3 });
     expect(out.meta.maxVotes).toBe(3);
+  });
+});
+
+describe('takeaways', () => {
+  const ACTOR = { userId: 'u1', displayName: 'Ann' };
+
+  it('accepts cards in the built-in takeaways column and moves cards into it', async () => {
+    const stub = freshStub();
+    const out = await runInDurableObject<BoardRoom, { add: ActionResult; snap: BoardSnapshot }>(stub, (i: any) => {
+      i.db.seed(TEMPLATES.sailboat, 6, 'owner');
+      const add = handleAddCard(i.db, ACTOR, { clientCardId: 'c1', columnId: TAKEAWAYS_COLUMN_ID, text: 'ship it' });
+      handleAddCard(i.db, ACTOR, { clientCardId: 'c2', columnId: 'wind', text: 'b' });
+      const b = i.db.snapshot('u1').cards.find((c: any) => c.text === 'b');
+      handleMoveCard(i.db, ACTOR, { cardId: b.id, toColumnId: TAKEAWAYS_COLUMN_ID, beforeId: null, afterId: null });
+      return { add, snap: i.db.snapshot('u1') };
+    });
+    expect(out.add.broadcast?.[0]).toMatchObject({ type: 'card_added' });
+    expect(out.snap.cards.every((c) => c.columnId === TAKEAWAYS_COLUMN_ID)).toBe(true);
+    expect(out.snap.columns.map((c) => c.id)).not.toContain(TAKEAWAYS_COLUMN_ID);
+  });
+
+  it('author can edit their own card', async () => {
+    const stub = freshStub();
+    const res = await runInDurableObject<BoardRoom, ActionResult>(stub, (i: any) => {
+      i.db.seed(TEMPLATES.sailboat, 6, 'owner');
+      handleAddCard(i.db, ACTOR, { clientCardId: 'c1', columnId: 'wind', text: 'old' });
+      const card = i.db.snapshot('u1').cards[0];
+      return handleEditCard(i.db, ACTOR, { cardId: card.id, text: ' new ' });
+    });
+    expect(res.broadcast?.[0]).toMatchObject({ type: 'card_edited', text: 'new' });
   });
 });

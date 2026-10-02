@@ -12,7 +12,7 @@ class FakeSocket {
   emit(obj: unknown) { this.onmessage?.({ data: JSON.stringify(obj) }); }
 }
 
-const snap: BoardSnapshot = { meta: { template: 'three_little_pigs', maxVotes: 3, ownerId: 'o' }, columns: [{ id: 'straws', title: 'S', subtitle: '' }], cards: [], yourVotes: {} };
+const snap: BoardSnapshot = { meta: { templateName: 'Three Little Pigs', maxVotes: 3, ownerId: 'o', glyph: { tone: 'coral', icon: 'home' } }, columns: [{ id: 'straws', title: 'S', subtitle: '', tone: 'amber', icon: 'wind' }], cards: [], yourVotes: {} };
 
 it('connects, applies init, and optimistic add appears before server echo', async () => {
   let sock!: FakeSocket;

@@ -23,7 +23,9 @@ clone you can self-host on Cloudflare's edge.
 ### Features
 
 - Magic-link login (passwordless email).
-- Create a board from one of two templates: **Three Little Pigs** and **Sailboat**.
+- Create a board from a built-in template (**Three Little Pigs**, **Sailboat**) **or your own**
+  custom template — build columns, titles, subtitles, and tones on the **Templates** page
+  (`/templates`, backed by the `/api/templates` CRUD endpoints).
 - Add / edit / delete cards in real time across all connected clients.
 - Vote on cards with a per-user vote budget (the board owner can change the max).
 - Sort a column by votes.
@@ -167,6 +169,23 @@ bun run deploy   # seeds the D1 schema (idempotent), then `wrangler deploy`
 
 The `deploy` script applies `src/worker/db/schema.sql` to the remote D1 (via the `DB` binding) before
 deploying; the schema uses `CREATE TABLE IF NOT EXISTS`, so it's safe to re-run on every deploy.
+
+#### Upgrading an existing deployment (one-time `template_snapshot` column)
+
+Custom templates freeze a **snapshot** of their columns onto each board at creation time (stored in
+`boards.template_snapshot`), so a board never changes when its template is later edited or deleted.
+
+Fresh deploys get this column automatically from `schema.sql`. But because the schema uses
+`CREATE TABLE IF NOT EXISTS`, re-running it on a **pre-existing** remote D1 will **not** add the new
+column — so a database that was created before this feature needs a one-time migration:
+
+```bash
+bunx wrangler d1 execute open-retro --remote --command "ALTER TABLE boards ADD COLUMN template_snapshot TEXT"
+```
+
+Run this once against the remote D1 before (or right after) deploying the new Worker. Skipping it
+makes `POST /api/boards` fail with `no column named template_snapshot`. (The same applies to a stale
+**local** dev D1 — re-create it from `schema.sql` or run the `ALTER` with `--local`.)
 
 ## Maintenance
 

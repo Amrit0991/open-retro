@@ -60,6 +60,45 @@ describe('verify + session', () => {
     expect(res.headers.get('set-cookie')).toMatch(/HttpOnly/i);
   });
 
+  it('verify redirects to an allowlisted next path', async () => {
+    const raw = await issueToken(env, 'g@h.com');
+    const res = await SELF.fetch(
+      `http://localhost:8787/api/auth/verify?token=${encodeURIComponent(raw)}&next=${encodeURIComponent('/b/abc_123')}`,
+      { redirect: 'manual' },
+    );
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('/b/abc_123');
+  });
+
+  it.each(['//evil.example', 'https://evil.example', '/\\evil.example', '/b/x/../../evil', 'javascript:alert(1)'])(
+    'verify ignores unsafe next %s',
+    async (next) => {
+      const raw = await issueToken(env, 'i@j.com');
+      const res = await SELF.fetch(
+        `http://localhost:8787/api/auth/verify?token=${encodeURIComponent(raw)}&next=${encodeURIComponent(next)}`,
+        { redirect: 'manual' },
+      );
+      expect(res.headers.get('location')).toBe('/');
+    },
+  );
+
+  it('request embeds a safe next in the magic link and drops unsafe ones', async () => {
+    const send = async (next: string) =>
+      (await (
+        await SELF.fetch('http://x/api/auth/request', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', origin: 'http://localhost:8787' },
+          body: JSON.stringify({ email: `n${Math.random()}@d.com`, next }),
+        })
+      ).json()) as { devUrl?: string };
+    const ok = await send('/b/board1');
+    if (ok.devUrl) {
+      expect(new URL(ok.devUrl).searchParams.get('next')).toBe('/b/board1');
+      const bad = await send('//evil.example');
+      expect(new URL(bad.devUrl!).searchParams.get('next')).toBeNull();
+    }
+  });
+
   it('rejects a request to a protected route without a session', async () => {
     const res = await SELF.fetch('http://localhost:8787/api/boards', {
       headers: { origin: 'http://localhost:8787' },

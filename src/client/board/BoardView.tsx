@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -44,9 +45,14 @@ export function BoardView() {
 
   const { state, actions } = useBoardSocket(id ?? '');
 
-  // Require a small pointer movement before a drag starts, so clicking the
-  // vote +/− and delete buttons isn't swallowed by the drag listeners.
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  // Mouse: require a small movement before a drag starts, so clicking the vote
+  // +/− and delete buttons isn't swallowed by the drag listeners.
+  // Touch: require a short press-and-hold, so swiping still scrolls the page and
+  // the columns instead of grabbing whichever card the finger landed on.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 8 } }),
+  );
 
   if (loading)
     return (
@@ -126,10 +132,12 @@ export function BoardView() {
           </div>
         </div>
         <div className="spacer" />
-        <VotesLeft remaining={remainingVotes(state)} max={state.maxVotes} />
-        <SortToggle on={sortOn} toggle={toggleSort} />
-        <ShareButton boardId={id ?? ''} />
-        {isOwner && <MaxVotesSetting value={state.maxVotes} onChange={actions.setMaxVotes} />}
+        <div className="board-actions">
+          <VotesLeft remaining={remainingVotes(state)} max={state.maxVotes} />
+          <SortToggle on={sortOn} toggle={toggleSort} />
+          <ShareButton boardId={id ?? ''} />
+          {isOwner && <MaxVotesSetting value={state.maxVotes} onChange={actions.setMaxVotes} />}
+        </div>
       </header>
       {/* Drag is disabled while sorted by votes: neighbor ids from vote-order
           would corrupt stored positions. */}

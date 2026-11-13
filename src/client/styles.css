@@ -283,6 +283,9 @@ select {
   color: var(--ink);
   text-decoration: none;
 }
+.brand .wordmark {
+  white-space: nowrap;
+}
 .brand .wordmark b {
   font-weight: 600;
 }
@@ -542,6 +545,11 @@ select {
   background: rgba(251, 250, 248, 0.82);
   backdrop-filter: saturate(1.4) blur(8px);
   z-index: 20;
+}
+.board-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 .board-bar .title {
   display: flex;
@@ -975,6 +983,115 @@ select {
   border: 1px solid var(--line-2);
   border-radius: var(--r-pill);
   padding: 3px 10px;
+}
+
+/* ---------------------------------------------------------- Mobile ------ */
+@media (max-width: 640px) {
+  /* iOS zooms the page when focusing inputs under 16px. */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  .topbar {
+    padding: 0 16px;
+    gap: 8px;
+  }
+  .topbar .btn {
+    padding: 0 12px;
+  }
+  .page {
+    padding: 24px 16px 64px;
+  }
+  .page-head {
+    margin-bottom: 20px;
+  }
+  .page-head h1 {
+    font-size: 26px;
+  }
+  .tmpl-cta {
+    width: 100%;
+  }
+
+  /* Board header: title row on top, actions in a swipeable row underneath. */
+  .board-bar {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 10px 16px;
+    row-gap: 10px;
+  }
+  .board-bar .title {
+    flex: 1;
+  }
+  .board-bar .spacer {
+    display: none;
+  }
+  .board-actions {
+    flex-basis: 100%;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+  .board-actions::-webkit-scrollbar {
+    display: none;
+  }
+  .board-actions > * {
+    flex-shrink: 0;
+  }
+
+  /* Columns: one at a time, swipe between them, with the next one peeking in. */
+  .columns {
+    grid-auto-columns: calc(100vw - 48px);
+    gap: 12px;
+    padding: 16px;
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 16px;
+    overscroll-behavior-x: contain;
+  }
+  .columns > .column {
+    scroll-snap-align: start;
+  }
+  .takeaways {
+    padding: 0 16px 24px;
+  }
+  .column-wide .col-cards {
+    grid-template-columns: 1fr;
+  }
+  .card-overlay {
+    width: calc(100vw - 80px);
+  }
+}
+
+/* Touch devices: no hover, so edit/delete must always be visible, and tap
+   targets need to be finger-sized. */
+@media (hover: none) {
+  .card-tools {
+    opacity: 1;
+  }
+  .card-tools button {
+    width: 32px;
+    height: 32px;
+  }
+  .card:has(.card-tools) .card-text {
+    padding-right: 72px;
+  }
+  .vote button {
+    width: 34px;
+    height: 34px;
+  }
+  .icon-btn {
+    width: 38px;
+    height: 38px;
+  }
+  /* Long-press starts a drag; don't also pop the iOS text-selection callout. */
+  .card {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

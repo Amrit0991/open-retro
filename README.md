@@ -125,6 +125,12 @@ bun run deploy:production
 ```
 
 This builds the frontend, applies the idempotent schema, and deploys the Worker.
+
+Pushes to `main` deploy automatically via `.github/workflows/deploy.yml`: typecheck and tests
+run first, then `deploy:production`. It needs two repository secrets, `CLOUDFLARE_API_TOKEN`
+(create it from the **Edit Cloudflare Workers** template in the production account, add
+**Account → D1 → Edit**, and include the `zestapp.co` zone so the custom domain can be updated) and
+`CLOUDFLARE_ACCOUNT_ID`. Use the **Run workflow** button on the Actions tab to redeploy without a new commit.
 The existing production database received the `template_snapshot` migration on
 2026-09-11. Login emails use `login@retro.zestapp.co`; Cloudflare Email Sending
 and its DNS records were enabled for this subdomain on the same date.

@@ -4,8 +4,8 @@ const json = (r: Response) => (r.ok ? r.json() : Promise.reject(new Error(String
 const h = { 'content-type': 'application/json' };
 
 export const api = {
-  requestMagicLink: (email: string) =>
-    fetch('/api/auth/request', { method: 'POST', headers: h, body: JSON.stringify({ email }) }).then(
+  requestMagicLink: (email: string, next?: string) =>
+    fetch('/api/auth/request', { method: 'POST', headers: h, body: JSON.stringify({ email, next }) }).then(
       () => {},
     ),
   me: () => fetch('/api/me').then((r) => (r.ok ? r.json() : null)),

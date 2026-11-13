@@ -4,6 +4,7 @@ import type { Env } from '../types';
 import { issueToken, consumeToken } from './tokens';
 import { tooManyRecently } from './rateLimit';
 import { sendMagicLink } from './mailer';
+import { safeNextPath } from '../../shared/nextPath';
 import {
   upsertUserByEmail,
   createSession,
@@ -15,14 +16,17 @@ import {
 export const authRoutes = new Hono<{ Bindings: Env }>();
 
 authRoutes.post('/request', async (c) => {
-  const { email } = await c.req
-    .json<{ email?: string }>()
-    .catch(() => ({ email: undefined }));
+  const { email, next } = await c.req
+    .json<{ email?: string; next?: string }>()
+    .catch(() => ({ email: undefined, next: undefined }));
   // Silently drop when over the per-email/hour cap — keep uniform response (no enumeration).
   if (email && (await tooManyRecently(c.env, email))) return c.json({ ok: true });
   if (email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     const raw = await issueToken(c.env, email);
-    const url = `${c.env.APP_ORIGIN}/api/auth/verify?token=${encodeURIComponent(raw)}`;
+    const safeNext = safeNextPath(next);
+    const url =
+      `${c.env.APP_ORIGIN}/api/auth/verify?token=${encodeURIComponent(raw)}` +
+      (safeNext ? `&next=${encodeURIComponent(safeNext)}` : '');
     try {
       await sendMagicLink(c.env, email, url);
     } catch (error) {
@@ -47,7 +51,8 @@ authRoutes.get('/verify', async (c) => {
   const userId = await upsertUserByEmail(c.env, email);
   const raw = await createSession(c.env, userId);
   setSessionCookie(c, raw);
-  return c.redirect('/', 302); // hardcoded target — no open redirect
+  // Re-validate: the emailed URL is user-controllable. Allowlisted in-app paths only.
+  return c.redirect(safeNextPath(c.req.query('next')) ?? '/', 302);
 });
 
 authRoutes.post('/logout', async (c) => {

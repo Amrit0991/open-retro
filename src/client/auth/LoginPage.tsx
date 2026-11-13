@@ -1,14 +1,16 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Glyph } from '../ui/Glyph';
 import { Icon } from '../ui/icons';
 
 export function LoginPage({
   requestMagicLink,
 }: {
-  requestMagicLink: (email: string) => Promise<void>;
+  requestMagicLink: (email: string, next?: string) => Promise<void>;
 }) {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
+  const next = useSearchParams()[0].get('next') ?? undefined; // validated server-side
 
   if (sent)
     return (
@@ -34,7 +36,7 @@ export function LoginPage({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            await requestMagicLink(email);
+            await requestMagicLink(email, next);
             setSent(true);
           }}
         >

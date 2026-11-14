@@ -107,8 +107,21 @@ it('submits email and shows the check-inbox confirmation', async () => {
   render(<LoginPage requestMagicLink={requestMagicLink} />);
   await userEvent.type(screen.getByLabelText(/email/i), 'a@b.com');
   await userEvent.click(screen.getByRole('button', { name: /send/i }));
-  expect(requestMagicLink).toHaveBeenCalledWith('a@b.com');
+  expect(requestMagicLink).toHaveBeenCalledWith('a@b.com', undefined);
   expect(await screen.findByText(/check your inbox/i)).toBeInTheDocument();
+});
+
+it('forwards ?next= from the login URL with the magic-link request', async () => {
+  window.history.pushState({}, '', '/login?next=%2Fb%2Fabc123');
+  try {
+    const requestMagicLink = vi.fn().mockResolvedValue(undefined);
+    render(<LoginPage requestMagicLink={requestMagicLink} />);
+    await userEvent.type(screen.getByLabelText(/email/i), 'a@b.com');
+    await userEvent.click(screen.getByRole('button', { name: /send/i }));
+    expect(requestMagicLink).toHaveBeenCalledWith('a@b.com', '/b/abc123');
+  } finally {
+    window.history.pushState({}, '', '/');
+  }
 });
 
 it('creates a board with chosen template and votes', async () => {

@@ -33,11 +33,11 @@ export function useSortByVotes(boardId: string): [boolean, () => void] {
 
 export function SortToggle({ on, toggle }: { on: boolean; toggle: () => void }) {
   return (
-    <button type="button" className="btn" aria-pressed={on} onClick={toggle}>
+    <button type="button" className="btn" aria-pressed={on} onClick={toggle} aria-label="Sort by votes" title="Sort by votes">
       <span className="icon-c">
         <Icon name="bars" size={16} />
       </span>
-      Sort by votes
+      <span className="btn-label">Sort by votes</span>
     </button>
   );
 }

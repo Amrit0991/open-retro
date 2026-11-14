@@ -5,7 +5,7 @@ export function VotesLeft({ remaining, max }: { remaining: number; max: number }
       aria-label="votes left"
       title="Votes you can still spend on this board"
     >
-      <span className="n">{remaining}</span> of {max} votes left
+      <span className="n">{remaining}</span> of {max} <span className="vl-word">votes </span>left
     </span>
   );
 }

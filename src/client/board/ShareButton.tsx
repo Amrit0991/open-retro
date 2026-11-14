@@ -15,11 +15,17 @@ export function ShareButton({ boardId }: { boardId: string }) {
       .catch(() => {});
   };
   return (
-    <button type="button" className="btn" onClick={copy}>
+    <button
+      type="button"
+      className="btn"
+      onClick={copy}
+      aria-label={copied ? 'Copied' : 'Share'}
+      title="Copy board link"
+    >
       <span className="icon-c">
         <Icon name={copied ? 'check' : 'share'} size={16} />
       </span>
-      {copied ? 'Copied' : 'Share'}
+      <span className="btn-label">{copied ? 'Copied' : 'Share'}</span>
     </button>
   );
 }

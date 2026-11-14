@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { Glyph } from '../ui/Glyph';
 import { Icon } from '../ui/icons';
 
@@ -10,7 +9,8 @@ export function LoginPage({
 }) {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
-  const next = useSearchParams()[0].get('next') ?? undefined; // validated server-side
+  // Read directly so LoginPage doesn't require a Router context. Validated server-side.
+  const next = new URLSearchParams(window.location.search).get('next') ?? undefined;
 
   if (sent)
     return (

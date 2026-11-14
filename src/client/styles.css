@@ -1028,7 +1028,10 @@ select {
     display: none;
   }
   .board-actions {
-    flex-basis: 100%;
+    /* Full-bleed: widen by the negative margins too, or the row stops 32px short
+       of the right edge and clips the controls mid-screen. */
+    flex: 0 0 calc(100% + 32px);
+    min-width: 0;
     gap: 8px;
     overflow-x: auto;
     scrollbar-width: none;

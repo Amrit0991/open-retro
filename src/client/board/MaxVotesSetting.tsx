@@ -12,9 +12,10 @@ export function MaxVotesSetting({
       <span className="icon-c">
         <Icon name="sliders" size={16} />
       </span>
-      Max votes
+      <span className="btn-label">Max votes</span>
       <input
         type="number"
+        aria-label="Max votes"
         min={1}
         max={99}
         value={value}

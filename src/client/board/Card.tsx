@@ -91,16 +91,6 @@ export function Card({
       style={style}
       {...(editing ? {} : { ...attributes, ...listeners })}
     >
-      {canModify && !editing && (
-        <span className="card-tools">
-          <button aria-label="edit" onClick={() => setEditing(true)}>
-            <Icon name="pencil" size={14} />
-          </button>
-          <button aria-label="delete" onClick={onDelete}>
-            <Icon name="trash" size={14} />
-          </button>
-        </span>
-      )}
       {editing ? (
         <CardEditor
           initial={card.text}
@@ -117,6 +107,16 @@ export function Card({
       )}
       <footer className="card-foot">
         <Author card={card} />
+        {canModify && !editing && (
+          <span className="card-tools">
+            <button aria-label="edit" onClick={() => setEditing(true)}>
+              <Icon name="pencil" size={15} />
+            </button>
+            <button aria-label="delete" onClick={onDelete}>
+              <Icon name="trash" size={15} />
+            </button>
+          </span>
+        )}
         <span className={`vote${mine > 0 ? ' mine' : ''}`}>
           <button aria-label="downvote" onClick={onUnvote} disabled={mine === 0}>
             <Icon name="minus" size={15} />
